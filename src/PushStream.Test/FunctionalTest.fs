@@ -15,6 +15,9 @@
 // ----------------------------------------------------------------------------------------------
 module FunctionalTest
 
+open System
+open System.Linq
+
 open FsCheck
 open PushStream
 
@@ -25,19 +28,28 @@ type FilterOption =
 
 type Properties() =
 
-  static let take n (vs : 'T []) =
-    let n = max n 0
-    if n > 0 && vs.Length > 0 then
-      let e = min (n - 1) (vs.Length - 1)
-      vs.[0..e]
-    else
-      [| |]
-  static let skip n (vs : 'T []) =
-    let n = max n 0
-    if n < vs.Length then
-      vs.[n..(vs.Length - 1)]
-    else
-      [| |]
+  static let clamp v b e =
+    if    v < b then b
+    elif  e < v then e
+    else  v
+
+  static let chunkBySize sz_ (vs : 'T []) =
+    let sz = clamp sz_ 1 Int32.MaxValue
+    let ra = ResizeArray 16
+
+    let rec loop i =
+      if i + sz <= vs.Length then
+        ra.Add vs.[i..(i + sz - 1)]
+        loop (i + sz)
+      elif i < vs.Length then
+        ra.Add vs.[i..(vs.Length - 1)]
+    loop 0
+
+    ra.ToArray ()
+
+  static let skip n (vs : #seq<'T>) = vs.Skip(n).ToArray()
+  static let take n (vs : #seq<'T>) = vs.Take(n).ToArray()
+
 
   // sources
   static member ``test empty`` () =
@@ -153,14 +165,11 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.take t |> Stream.toArray
     e = a
 
-// TODO: chunkBySize
-(*
   static member ``test chunkBySize`` (sz : int) (vs : int []) =
     sz > 0 ==> fun () ->
-      let e = vs |> Array.chunkBySize sz
-      let a = vs |> Stream.ofArray |> Stream.windowed sz |> Stream.toArray
+      let e = vs |> chunkBySize sz
+      let a = vs |> Stream.ofArray |> Stream.chunkBySize sz |> Stream.toArray
       e = a
-*)
 
   // sinks
   static member ``test first`` (dv : int) (vs : int []) =
@@ -196,6 +205,9 @@ type Properties() =
   //  Also needs test to make sure early returns actually are early returning
 
 let test () =
-  Properties.``test collect + take`` 1 [|[| 0; 0; |]; [|0|] |] |> ignore
+#if DEBUG
   let config = Config.Quick
+#else
+  let config = { Config.Quick with MaxTest = 1000; MaxFail = 1000 }
+#endif
   Check.All<Properties> config
