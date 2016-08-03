@@ -93,16 +93,36 @@ module Stream =
     fun r c ->
       s.Invoke ((fun v -> match f v with Some u -> r u | None -> true), c)
 
+  let inline chunkBySize size (s : Stream<'T>) : Stream<'T []> =
+    let s = adapt s
+    let size = max 1 size
+    fun r c ->
+      let ra = ResizeArray defaultSize
+      s.Invoke (
+        (fun v ->
+          ra.Add v
+          if ra.Count < size then
+            true
+          else
+            let vs = ra.ToArray ()
+            ra.Clear ()
+            r vs
+        ),
+        (fun more ->
+          if more && ra.Count > 0 then
+            r (ra.ToArray ()) |> ignore
+          c more
+        ))
+
   let inline collect (m : 'T -> Stream<'U>) (s : Stream<'T>) : Stream<'U> =
     let s = adapt s
     fun r c ->
       let mutable cont = true
-      let mc more = cont <- cont && more
       s.Invoke (
         (fun v ->
           let ms = m v
           let ms = adapt ms
-          ms.Invoke (r, mc)
+          ms.Invoke ((fun v -> cont <- cont && r v; cont), nop)
           cont
         ),c)
 
@@ -114,8 +134,8 @@ module Stream =
           printfn "STREAM: %s - %A" name v
           r v),
         (fun more ->
-          c more
           printfn "STREAM: %s - more:%A" name more
+          c more
         ))
 
   let inline filter (f : 'T -> bool) (s : Stream<'T>) : Stream<'T> =
@@ -176,11 +196,11 @@ module Stream =
       s.Invoke (
         (fun v -> ra.Add v; true),
         (fun more ->
-          c more
           if more then
             ra.Sort comp
             let rec loop i = if i < ra.Count && r ra.[i] then loop (i + 1)
             Loop.ofResizeArray ra r 0 |> ignore
+          c more
         ))
 
   let inline take n (s : Stream<'T>) : Stream<'T> =
@@ -188,27 +208,6 @@ module Stream =
     fun r c ->
       let mutable rem = n
       s.Invoke ((fun v -> if rem > 0 then rem <- rem - 1; r v else false), c)
-
-  let inline windowed size (s : Stream<'T>) : Stream<'T []> =
-    let s = adapt s
-    let size = max 1 size
-    fun r c ->
-      let ra = ResizeArray defaultSize
-      s.Invoke (
-        (fun v ->
-        if ra.Count < size then
-          ra.Add v
-          true
-        else
-          let vs = ra.ToArray ()
-          ra.Clear ()
-          r vs
-        ),
-        (fun more ->
-          if more && ra.Count > 0 then
-            r (ra.ToArray ()) |> ignore
-          c more
-        ))
 
   // sinks
 

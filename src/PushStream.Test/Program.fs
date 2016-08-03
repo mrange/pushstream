@@ -17,6 +17,6 @@
 let main argv =
   System.Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory
 
-//  PerformanceTest.test "perf.tsv"
   FunctionalTest.test ()
+//  PerformanceTest.test "perf.tsv"
   0

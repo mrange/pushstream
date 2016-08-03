@@ -25,10 +25,17 @@ type FilterOption =
 
 type Properties() =
 
-  static let take n (vs : 'T []) = vs.[0..(min n (vs.Length - 1))]
+  static let take n (vs : 'T []) =
+    let n = max n 0
+    if n > 0 && vs.Length > 0 then
+      let e = min (n - 1) (vs.Length - 1)
+      vs.[0..e]
+    else
+      [| |]
   static let skip n (vs : 'T []) =
+    let n = max n 0
     if n < vs.Length then
-      vs.[n..(vs.Length - n - 1)]
+      vs.[n..(vs.Length - 1)]
     else
       [| |]
 
@@ -146,11 +153,14 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.take t |> Stream.toArray
     e = a
 
-  static member ``test windowed`` (sz : int) (vs : int []) =
+// TODO: chunkBySize
+(*
+  static member ``test chunkBySize`` (sz : int) (vs : int []) =
     sz > 0 ==> fun () ->
-      let e = vs |> Seq.windowed sz |> Seq.toArray
+      let e = vs |> Array.chunkBySize sz
       let a = vs |> Stream.ofArray |> Stream.windowed sz |> Stream.toArray
       e = a
+*)
 
   // sinks
   static member ``test first`` (dv : int) (vs : int []) =
@@ -183,7 +193,9 @@ type Properties() =
 
   // TODO: Test complex chains with early returns
   //  Special care to chains containing multiple pipes that have completion actions
+  //  Also needs test to make sure early returns actually are early returning
 
 let test () =
+  Properties.``test collect + take`` 1 [|[| 0; 0; |]; [|0|] |] |> ignore
   let config = Config.Quick
   Check.All<Properties> config
