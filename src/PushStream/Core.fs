@@ -24,7 +24,7 @@ module Stream =
     let defaultSize       = 16
     let nopImpl more      = ()
     let nop : Completion  = nopImpl
-    let inline adapt (s : Stream<'T>) = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
+    let inline adapt s    = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
 
     module Loop =
       let rec ofArray (vs : 'T []) r i = if i < vs.Length then r vs.[i] && ofArray vs r (i + 1) else true
@@ -150,10 +150,10 @@ module Stream =
 
   let inline mapi (m : int -> 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
     let s = adapt s
-    let oc = OptimizedClosures.FSharpFunc<_, _, _>.Adapt m
+    let m = adapt m
     fun r c ->
       let mutable i = -1
-      s.Invoke ((fun v -> i <- i + 1; r (oc.Invoke (i, v))), c)
+      s.Invoke ((fun v -> i <- i + 1; r (m.Invoke (i, v))), c)
 
   let inline skip n (s : Stream<'T>) : Stream<'T> =
     let s = adapt s
@@ -168,12 +168,12 @@ module Stream =
 
   let inline streamingFold (f : 'S -> 'T -> StreamingFold<'U, 'S>) (z : 'S) (s : Stream<'T>) : Stream<'U> =
     let s = adapt s
-    let oc = OptimizedClosures.FSharpFunc<_, _, _>.Adapt f
+    let f = adapt f
     fun r c ->
       let mutable acc = z
       s.Invoke (
         (fun v ->
-          match oc.Invoke (acc, v) with
+          match f.Invoke (acc, v) with
           | Stop          ->
             false
           | Fold s        ->
@@ -219,16 +219,16 @@ module Stream =
 
   let inline fold (f : 'S -> 'T -> 'S) (z : 'S) (s : Stream<'T>) : 'S =
     let s = adapt s
-    let oc = OptimizedClosures.FSharpFunc<_, _, _>.Adapt f
+    let f = adapt f
     let mutable acc = z
-    s.Invoke ((fun v -> acc <- oc.Invoke (acc, v); true), nop)
+    s.Invoke ((fun v -> acc <- f.Invoke (acc, v); true), nop)
     acc
 
   let inline reduce (r : 'T -> 'T -> 'T) (s : Stream<'T>) : 'T =
     let s = adapt s
-    let oc = OptimizedClosures.FSharpFunc<_, _, _>.Adapt r
+    let r = adapt r
     let mutable acc = LanguagePrimitives.GenericZero
-    s.Invoke ((fun v -> acc <- oc.Invoke (acc, v); true), nop)
+    s.Invoke ((fun v -> acc <- r.Invoke (acc, v); true), nop)
     acc
 
   let inline sum (s : Stream<'T>) : 'T =

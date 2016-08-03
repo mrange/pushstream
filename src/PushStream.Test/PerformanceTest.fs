@@ -81,14 +81,16 @@ let trivialTest n =
   |> TrivialStream.map     ((+) 1L)
   |> TrivialStream.sum
 
+open System.Diagnostics
+
 let test (path : string) =
   let testCases =
     [|
-      "array"       , arrayTest
-      "imperative"  , imperativeTest
-      "trivial"     , trivialTest
-      "nessos"      , nessosTest
-      "push"        , pushTest
+      "array"       , arrayTest       , false
+      "imperative"  , imperativeTest  , false
+      "trivialpush" , trivialTest     , false
+      "nessos"      , nessosTest      , false
+      "pushstream"  , pushTest        , false
     |]
   use out                   = new System.IO.StreamWriter (path)
   let write (msg : string)  = out.WriteLine msg
@@ -97,11 +99,17 @@ let test (path : string) =
   write "Name\tTotal\tOuter\tInner\tElapsed\tCC0\tCC1\tCC2\tResult"
 
   let total   = 100000000
-  let outers = [| 10; 1000; 1000000 |]
-  for outer in outers do
+  let outers =
+    [|
+      10        , false
+      1000      , false
+      1000000   , false
+    |]
+  for outer, obreak in outers do
     let inner = total / outer
-    for name, a in testCases do
+    for name, a, ibreak in testCases do
       printfn "Running %s with total=%d, outer=%d, inner=%d ..." name total outer inner
       let v, ms, cc0, cc1, cc2 = time outer (fun () -> a inner)
       printfn "  ... %d ms, cc0=%d, cc1=%d, cc2=%d, result=%A" ms cc0 cc1 cc2 v
       writef "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" name total outer inner ms cc0 cc1 cc2 v
+      if obreak && ibreak && Debugger.IsAttached then Debugger.Break ()
