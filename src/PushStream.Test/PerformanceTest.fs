@@ -40,6 +40,13 @@ let time n a =
 
 open Nessos.Streams
 
+let arrayTest n =
+  Array.init (n + 1) id
+  |> Array.map    int64
+  |> Array.filter (fun v -> v % 2L = 0L)
+  |> Array.map    ((+) 1L)
+  |> Array.sum
+
 let imperativeTest n =
   let rec loop s i =
     if i >= 0L then
@@ -77,6 +84,7 @@ let trivialTest n =
 let test (path : string) =
   let testCases =
     [|
+      "array"       , arrayTest
       "imperative"  , imperativeTest
       "trivial"     , trivialTest
       "nessos"      , nessosTest
