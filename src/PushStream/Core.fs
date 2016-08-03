@@ -27,6 +27,8 @@ module Stream =
     let inline adapt s    = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
 
     module Loop =
+      // Function local loop functions currently make F# 4.0 create unnecessary loop objects
+      //  By making loop functions external no unnecessary object is created
       let rec ofArray (vs : 'T []) r i = if i < vs.Length then r vs.[i] && ofArray vs r (i + 1) else true
       let rec ofList r l =
         match l with
@@ -242,3 +244,9 @@ module Stream =
     let ra = ResizeArray defaultSize
     s.Invoke ((fun v -> ra.Add v; true), nop)
     ra.ToArray ()
+
+  // aliases
+
+  let inline bind t uf = collect uf t
+  let inline return_ v = singleton v
+  let inline concat s  = collect id s
