@@ -54,7 +54,7 @@ type Between10And100 =
     between v 10 100
 
 type Chain =
-  | ChunkBySize of Between1And10
+  | ChunkBySize of Between1And10  // TODO: Make ChunkBySize recursive
   | Map         of int
   | Skip        of Between1And10
   | Sort

@@ -15,20 +15,21 @@
 // ----------------------------------------------------------------------------------------------
 module TrivialStream
 
-type Receiver<'T> = 'T            -> bool
+// The trivial stream is a very simplistic push stream that doesn't support
+//  early exits (useful for first) or completion events (useful for sort)
+//  The trivial stream is useful as basic stream to measure performance against
+
+type Receiver<'T> = 'T            -> unit
 type Stream<'T>   = Receiver<'T>  -> unit
 
 module Details =
   module Loop =
-    let rec ofArray (vs : 'T []) r i = if i < vs.Length then if r vs.[i] then ofArray vs r (i + 1)
-    let rec range s e r i = if i <= e then if r i then range s e r (i + s)
+    // This way to iterate seems to be faster in F#4 than a while loop
+    let rec range s e r i = if i <= e then r i; range s e r (i + s)
 
 open Details
 
 // Sources
-
-let inline ofArray (vs : 'T []) : Stream<'T> =
-  fun r -> Loop.ofArray vs r 0
 
 let inline range b s e : Stream<int> =
   fun r -> Loop.range s e r b
@@ -36,26 +37,14 @@ let inline range b s e : Stream<int> =
 // Pipes
 
 let inline filter (f : 'T -> bool) (s : Stream<'T>) : Stream<'T> =
-  fun r -> s (fun v -> if f v then r v else true)
+  fun r -> s (fun v -> if f v then r v)
 
 let inline map (m : 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
   fun r -> s (fun v -> r (m v))
-
-let inline mapi (m : int -> 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
-  let om = OptimizedClosures.FSharpFunc<_, _, _>.Adapt m
-  fun r ->
-    let mutable i = -1
-    s (fun v -> i <- i + 1; r (om.Invoke (i, v)))
 
 // Sinks
 
 let inline sum (s : Stream<'T>) : 'T =
   let mutable ss = LanguagePrimitives.GenericZero
-  s (fun v -> ss <- ss + v; true)
+  s (fun v -> ss <- ss + v)
   ss
-
-let inline toArray (s : Stream<'T>) : 'T [] =
-  let ra = ResizeArray 16
-  s (fun v -> ra.Add v; true)
-  ra.ToArray ()
-
