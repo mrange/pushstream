@@ -129,9 +129,10 @@ type Properties() =
       let a   = Stream.range b s e |> Stream.toArray
       e_ = a
 
-  static member ``test repeat`` (v : int64) (n : int) =
+  static member ``test replicate`` (v : int64) (n : int) =
+    let n = n % 100
     let e = [| for i in 1..n -> v |]
-    let a = Stream.repeat v n |> Stream.toArray
+    let a = Stream.replicate n v |> Stream.toArray
     e = a
 
   static member ``test singleton`` (v : int) =
