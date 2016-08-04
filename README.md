@@ -72,7 +72,7 @@ An equivalent data pipeline is implemented for each alternative.
 
 ### Elapsed ms - F# 3.1 - .NET 4.5.2 - x64
 
-> Image
+[![Elapsed ms - F# 3.1 - .NET 4.5.2 - x64][1]][1]
 
 The bars show the elapsed time in milliseconds. Lower is better.
 
@@ -86,7 +86,7 @@ the CPU time needed.
 
 ### Collection Count - F# 3.1 - .NET 4.5.2 - x64
 
-> Image
+[![Collection Count - F# 3.1 - .NET 4.5.2 - x64][2]][2]
 
 The bars show the total count of GC collection runs during test runs. Lower is better.
 
@@ -97,3 +97,6 @@ GC overhead than `Nessos`.
 
 `Nessos` is a great library but `PushStream` offers simplicity and lower overhead
 when you don't need all features of `Nessos`.
+
+  [1]: img/perf_cpu.png
+  [2]: img/perf_cc.png
