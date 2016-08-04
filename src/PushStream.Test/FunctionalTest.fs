@@ -21,17 +21,43 @@ open System.Linq
 open FsCheck
 open PushStream
 
+let inline clamp v b e =
+  if    v < b then b
+  elif  e < v then e
+  else  v
+
+let between v b e =
+  let bb = min b e
+  let ee = max b e
+  let dd = ee - bb
+  let aa = (v - bb) % dd |> abs
+  bb + aa
+
 type FilterOption =
   | All
   | Nothing
   | Mod2
 
-type Properties() =
+type Between1And10 =
+  | Between1And10 of int
+  member x.Value =
+    let (Between1And10 v) = x
+    between v 1 10
 
-  static let clamp v b e =
-    if    v < b then b
-    elif  e < v then e
-    else  v
+type Between10And100 =
+  | Between10And100 of int
+  member x.Value =
+    let (Between10And100 v) = x
+    between v 10 100
+
+type Chain =
+  | ChunkBySize of Between1And10
+  | Map         of int
+  | Skip        of Between1And10
+  | Sort
+  | Take        of Between10And100
+
+type Properties() =
 
   static let chunkBySize sz_ (vs : 'T []) =
     let sz = clamp sz_ 1 Int32.MaxValue
@@ -177,6 +203,12 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.first dv
     e = a
 
+  static member ``test first - early return`` (dv : int) (vs : int []) =
+    let mutable c = 0
+    let e = if vs.Length > 0 then vs.[0] else dv
+    let a = vs |> Stream.ofArray |> Stream.map (fun v -> c <- c + 1; v) |> Stream.first dv
+    e = a && c = (min 1 vs.Length)
+
   static member ``test fold`` (vs : int []) =
     let f s v = s + int64 v
     let z = 0L
@@ -198,6 +230,46 @@ type Properties() =
   static member ``test toArray`` (vs : int []) =
     let e = vs
     let a = vs |> Stream.ofArray |> Stream.toArray
+    e = a
+
+  static member ``test complex chain`` (c : int) (vs : int []) =
+    let c = between c 0 100
+    let f = fun v -> v % 2 = 0
+    let m = (+) 1
+    let e =
+      [|0..1..c|]
+      |> Array.filter f
+      |> chunkBySize 10
+      |> Array.concat
+      |> Array.sort
+      |> Array.map m
+    let a =
+      Stream.range 0 1 c
+      |> Stream.filter f
+      |> Stream.chunkBySize 10
+      |> Stream.collect Stream.ofArray
+      |> Stream.sortBy id
+      |> Stream.map m
+      |> Stream.toArray
+    e = a
+
+  static member ``test complex chains`` (c : int) (chains : Chain []) =
+    let c       = between c 0 100
+    let chains  = chains |> take 10
+    let rec loop i e a =
+      if i < chains.Length then
+        let e, a =
+          match chains.[i] with
+          | ChunkBySize j -> e |> chunkBySize j.Value |> Array.concat , a |> Stream.chunkBySize j.Value |> Stream.collect Stream.ofArray
+          | Map         j -> e |> Array.map ((+) j)                   , a |> Stream.map ((+) j)
+          | Skip        j -> e |> skip j.Value                        , a |> Stream.skip j.Value
+          | Sort          -> e |> Array.sort                          , a |> Stream.sortBy id
+          | Take        j -> e |> take j.Value                        , a |> Stream.take j.Value
+        loop (i + 1) e a
+      else e, a
+    let se, sa = loop 0 ([|0..1..c|]) (Stream.range 0 1 c)
+    let e = se
+    let a = sa |> Stream.toArray
     e = a
 
   // TODO: Test complex chains with early returns
