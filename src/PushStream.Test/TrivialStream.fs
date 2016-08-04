@@ -31,7 +31,7 @@ let inline ofArray (vs : 'T []) : Stream<'T> =
   fun r -> Loop.ofArray vs r 0
 
 let inline range b s e : Stream<int> =
-  fun r -> Loop.range s e r 0
+  fun r -> Loop.range s e r b
 
 // Pipes
 
