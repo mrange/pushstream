@@ -118,9 +118,9 @@ module Stream =
       Loop.replicate n v r 0
       c ()
 
-    /// <summary>Returns a stream that contains one item only.</summary>
-    /// <param name="v">The input item.</param>
-    /// <returns>The stream of one item.</returns>
+  /// <summary>Returns a stream that contains one item only.</summary>
+  /// <param name="v">The input item.</param>
+  /// <returns>The stream of one item.</returns>
   let inline singleton v : Stream<'T> =
     fun r c ->
       r v |> ignore
@@ -191,7 +191,10 @@ module Stream =
           cont
         ),c)
 
-  /// TODO:
+  /// <summary>Traces each element in the stream in addition traces the completion event. Used for debugging.</summary>
+  /// <param name="name">A name traced with each value and completion event.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The tracing stream.</returns>
   let inline debug name (s : Stream<'T>) : Stream<'T> =
     let s = adapt s
     fun r c ->
@@ -246,30 +249,6 @@ module Stream =
     fun r c ->
       let mutable rem = n
       s.Invoke ((fun v -> if rem > 0 then rem <- rem - 1; true else r v), c)
-
-  type StreamingFold<'T, 'S> =
-    | Stop
-    | Fold    of 'S
-    | Result  of 'T*'S
-
-  /// TODO:
-  let inline streamingFold (f : 'S -> 'T -> StreamingFold<'U, 'S>) (z : 'S) (s : Stream<'T>) : Stream<'U> =
-    let s = adapt s
-    let f = adapt f
-    fun r c ->
-      let mutable acc = z
-      s.Invoke (
-        (fun v ->
-          match f.Invoke (acc, v) with
-          | Stop          ->
-            false
-          | Fold s        ->
-            acc <- s
-            true
-          | Result (u, s) ->
-            acc <- s
-            r u
-        ), c)
 
   /// <summary>Sorts the given stream using keys given by the given projection. Keys are compared using Operators.compare.</summary>
   /// <remarks>This is a stable sort, i.e. the original order of equal elements is preserved.</remarks>
@@ -343,7 +322,9 @@ module Stream =
     s.Invoke ((fun v -> acc <- r.Invoke (acc, v); true), nop)
     acc
 
-  /// TODO:
+  /// <summary>Creates a sum of values in a given stream.</summary>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The sum of all elements of the stream.</returns>
   let inline sum (s : Stream<'T>) : 'T =
     let s = adapt s
     let mutable acc = LanguagePrimitives.GenericZero
@@ -361,10 +342,15 @@ module Stream =
 
   // aliases
 
-  /// TODO:
+  /// <summary>For each element of the stream, applies the given function. Concatenates all the results and return the combined stream.</summary>
+  /// <param name="t">The input stream.</param>
+  /// <param name="uf">The function to transform each input element into a substream to be concatenated.</param>
+  /// <returns>The concatenation of the transformed substreams.</returns>
   let inline bind t uf = collect uf t
 
-  /// TODO:
+  /// <summary>Returns a stream that contains one item only.</summary>
+  /// <param name="v">The input item.</param>
+  /// <returns>The stream of one item.</returns>
   let inline return_ v = singleton v
 
   /// <summary>Returns a new stream that contains the elements of each the streams in order.</summary>

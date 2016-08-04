@@ -16,6 +16,7 @@
 module FunctionalTest
 
 open System
+open System.Collections.Generic
 open System.Linq
 
 open FsCheck
@@ -201,8 +202,6 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.skip s |> Stream.toArray
     e = a
 
-// TODO: streamingFold
-
   static member ``test sortBy`` (vs : int []) =
     let e = vs |> Array.sortBy id
     let a = vs |> Stream.ofArray |> Stream.sortBy id |> Stream.toArray
@@ -294,12 +293,15 @@ type Properties() =
     let a = sa |> Stream.toArray
     e = a
 
-  // TODO: Test complex chains with early returns
-  //  Special care to chains containing multiple pipes that have completion actions
-  //  Also needs test to make sure early returns actually are early returning
-
 let test () =
-  Properties.``test complex chains`` [|Take (Between10And100 19); Sort|] [|0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0|] |> ignore
+  // Code coverage for 'Stream.debug'
+  Stream.range 4 -1 0
+  |> Stream.debug "range"
+  |> Stream.sortBy id
+  |> Stream.debug "sortBy"
+  |> Stream.sum
+  |> ignore
+
 #if DEBUG
   let config = Config.Quick
 #else
