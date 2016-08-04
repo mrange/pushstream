@@ -17,8 +17,10 @@
 let main argv =
   System.Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory
 
-//  FunctionalTest.test ()
 #if !DEBUG
   PerformanceTest.test "perf.tsv"
 #endif
+
+  FunctionalTest.test ()
+
   0

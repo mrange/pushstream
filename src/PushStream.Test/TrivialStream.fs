@@ -20,8 +20,8 @@ type Stream<'T>   = Receiver<'T>  -> unit
 
 module Details =
   module Loop =
-    let rec ofArray (vs : 'T []) r i = if i < vs.Length && r vs.[i] then ofArray vs r (i + 1)
-    let rec range s e r i = if i <= e && r i then range s e r (i + s)
+    let rec ofArray (vs : 'T []) r i = if i < vs.Length then if r vs.[i] then ofArray vs r (i + 1)
+    let rec range s e r i = if i <= e then if r i then range s e r (i + s)
 
 open Details
 
