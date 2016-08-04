@@ -29,19 +29,19 @@ module Stream =
     module Loop =
       // Function local loop functions currently make F# 4.0 create unnecessary loop objects
       //  By making loop functions external no unnecessary object is created
-      let rec ofArray (vs : 'T []) r i = if i < vs.Length && r vs.[i] then ofArray vs r (i + 1)
+      let rec ofArray (vs : 'T []) r i = if i < vs.Length then r vs.[i] && ofArray vs r (i + 1) else true
       let rec ofList r l =
         match l with
-        | x::xs when r x  -> ofList r xs
-        | _               -> ()
-      let rec ofResizeArray (vs : ResizeArray<_>) r i = if i < vs.Count && r vs.[i]then ofResizeArray vs r (i + 1)
-      let rec rangeForward s e r i = if i <= e && r i then rangeForward s e r (i + s)
-      let rec rangeReverse s e r i = if i >= e && r i then rangeReverse s e r (i + s)
-      let rec repeat v n r i = if i < n && r v then repeat v n r (i + 1)
+        | x::xs -> r x && ofList r xs
+        | _     -> true
+      let rec ofResizeArray (vs : ResizeArray<_>) r i = if i < vs.Count then r vs.[i] && ofResizeArray vs r (i + 1) else true
+      let rec rangeForward s e r i = if i <= e then r i && rangeForward s e r (i + s) else true
+      let rec rangeReverse s e r i = if i >= e then r i && rangeReverse s e r (i + s) else true
+      let rec repeat v n r i = if i < n then r v && repeat v n r (i + 1) else true
       let rec unfold f r s =
         match f s with
-        | Some (v, s) when r v  -> unfold f r s
-        | _                     -> ()
+        | Some (v, s) -> r v && unfold f r s
+        | None        -> true
 
   open Internals
   open System
@@ -54,17 +54,17 @@ module Stream =
 
   let inline ofArray (vs : 'T []) : Stream<'T> =
     fun r c ->
-      Loop.ofArray vs r 0
+      Loop.ofArray vs r 0 |> ignore
       c ()
 
   let inline ofList (vs : 'T list) : Stream<'T> =
     fun r c ->
-      Loop.ofList r vs
+      Loop.ofList r vs |> ignore
       c ()
 
   let inline ofResizeArray (vs : ResizeArray<'T>) : Stream<'T> =
     fun r c ->
-      Loop.ofResizeArray vs r 0
+      Loop.ofResizeArray vs r 0 |> ignore
       c ()
 
   let inline range b s e : Stream<'T> =
@@ -72,18 +72,18 @@ module Stream =
       raise (ArgumentException ("Step of range can not be 0", "s"))
     elif b <= e && s > 0 then
       fun r c ->
-        Loop.rangeForward s e r b
+        Loop.rangeForward s e r b |> ignore
         c ()
     elif e <= b && s < 0 then
       fun r c ->
-        Loop.rangeReverse s e r b
+        Loop.rangeReverse s e r b |> ignore
         c ()
     else
       empty
 
   let inline repeat v n : Stream<'T> =
     fun r c ->
-      Loop.repeat v n r 0
+      Loop.repeat v n r 0 |> ignore
       c ()
 
   let inline singleton v : Stream<'T> =
@@ -93,7 +93,7 @@ module Stream =
 
   let inline unfold (f : 'S -> ('T*'S) option) (z : 'S): Stream<'T> =
     fun r c ->
-      Loop.unfold f r z
+      Loop.unfold f r z |> ignore
       c ()
 
   // pipes
@@ -141,11 +141,11 @@ module Stream =
     fun r c ->
       s.Invoke (
         (fun v ->
-          printfn "STREAM: %s - %A" name v
+          printfn "STREAM: %s - Value: %A" name v
           r v),
-        (fun more ->
-          printfn "STREAM: %s - more:%A" name more
-          c more
+        (fun () ->
+          printfn "STREAM: %s - Completed" name
+          c ()
         ))
 
   let inline filter (f : 'T -> bool) (s : Stream<'T>) : Stream<'T> =
