@@ -121,6 +121,11 @@ type Properties() =
     let a = vs |> Stream.ofResizeArray |> Stream.toArray
     e = a
 
+  static member ``test ofSeq`` (vs : int []) =
+    let e = vs
+    let a = vs |> Stream.ofSeq |> Stream.toArray
+    e = a
+
   static member ``test range`` (b : int) (s : int) (e : int) =
     let b = b % 100
     let s = s % 100

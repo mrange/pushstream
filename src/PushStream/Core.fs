@@ -28,6 +28,8 @@ type Stream<'T>   = Receiver<'T> -> Completion  -> unit
 [<RequireQualifiedAccess>]
 module Stream =
   module Internals =
+    open System.Collections.Generic
+
     let defaultSize       = 16
     let nopImpl ()        = ()
     let nop : Completion  = nopImpl
@@ -40,12 +42,19 @@ module Stream =
       //    let rec rangeForward s e r i = if i <= e then if r i then rangeForward s e r (i + s)
       //  Seems to perform better than equivalent pattern
       //    let rec rangeForward s e r i = if i <= e && r i then rangeForward s e r (i + s)
+      //  Or:
+      //    let rec rangeForward s e r i = let mutable i = i in while i <= e && r i do i <- i + s
       let rec ofArray (vs : 'T []) r i = if i < vs.Length then if r vs.[i] then ofArray vs r (i + 1)
       let rec ofList r l =
         match l with
         | x::xs -> if r x then ofList r xs
         | _     -> ()
       let rec ofResizeArray (vs : ResizeArray<_>) r i = if i < vs.Count then if r vs.[i] then ofResizeArray vs r (i + 1)
+      let rec ofSeq (e : #IEnumerator<'T>) r =
+        let mutable e = e
+        // Doesn't use tail-rec because of e needs to be mutabler
+        //  seqs are slow anyhow
+        while e.MoveNext () && r e.Current do ()
       let rec rangeForward s e r i = if i <= e then if r i then rangeForward s e r (i + s)
       let rec rangeReverse s e r i = if i >= e then if r i then rangeReverse s e r (i + s)
       let rec replicate n v r i = if i < n then if r v then replicate n v r (i + 1)
@@ -87,6 +96,15 @@ module Stream =
   let inline ofResizeArray (vs : ResizeArray<'T>) : Stream<'T> =
     fun r c ->
       Loop.ofResizeArray vs r 0
+      c ()
+
+  /// <summary>Builds a stream from the given seq.</summary>
+  /// <param name="vs">The input seq.</param>
+  /// <returns>The stream of elements from the seq.</returns>
+  let inline ofSeq (vs : #seq<'T>) : Stream<'T> =
+    fun r c ->
+      use e = vs.GetEnumerator ()
+      Loop.ofSeq e r
       c ()
 
   /// <summary>Generates a stream from a range specification.</summary>
