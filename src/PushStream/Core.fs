@@ -15,33 +15,33 @@
 // ----------------------------------------------------------------------------------------------
 namespace PushStream
 
-type Completion   = bool                        -> unit
+type Completion   = unit                        -> unit
 type Receiver<'T> = 'T                          -> bool
 type Stream<'T>   = Receiver<'T> -> Completion  -> unit
 
 module Stream =
   module Internals =
     let defaultSize       = 16
-    let nopImpl more      = ()
+    let nopImpl ()        = ()
     let nop : Completion  = nopImpl
     let inline adapt s    = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
 
     module Loop =
       // Function local loop functions currently make F# 4.0 create unnecessary loop objects
       //  By making loop functions external no unnecessary object is created
-      let rec ofArray (vs : 'T []) r i = if i < vs.Length then r vs.[i] && ofArray vs r (i + 1) else true
+      let rec ofArray (vs : 'T []) r i = if i < vs.Length && r vs.[i] then ofArray vs r (i + 1)
       let rec ofList r l =
         match l with
-        | x::xs -> r x && ofList r xs
-        | _     -> true
-      let rec ofResizeArray (vs : ResizeArray<_>) r i = if i < vs.Count then r vs.[i] && ofResizeArray vs r (i + 1) else true
-      let rec rangeForward s e r i = if i <= e then r i && rangeForward s e r (i + s) else true
-      let rec rangeReverse s e r i = if i >= e then r i && rangeReverse s e r (i + s) else true
-      let rec repeat v n r i = if i < n then r v && repeat v n r (i + 1) else true
+        | x::xs when r x  -> ofList r xs
+        | _               -> ()
+      let rec ofResizeArray (vs : ResizeArray<_>) r i = if i < vs.Count && r vs.[i]then ofResizeArray vs r (i + 1)
+      let rec rangeForward s e r i = if i <= e && r i then rangeForward s e r (i + s)
+      let rec rangeReverse s e r i = if i >= e && r i then rangeReverse s e r (i + s)
+      let rec repeat v n r i = if i < n && r v then repeat v n r (i + 1)
       let rec unfold f r s =
         match f s with
-        | Some (v, s) -> r v && unfold f r s
-        | None        -> true
+        | Some (v, s) when r v  -> unfold f r s
+        | _                     -> ()
 
   open Internals
   open System
@@ -50,43 +50,51 @@ module Stream =
 
   let empty<'T> : Stream<'T> =
     fun r c ->
-      true |> c
+      c ()
 
   let inline ofArray (vs : 'T []) : Stream<'T> =
     fun r c ->
-      Loop.ofArray vs r 0 |> c
+      Loop.ofArray vs r 0
+      c ()
 
   let inline ofList (vs : 'T list) : Stream<'T> =
     fun r c ->
-      Loop.ofList r vs |> c
+      Loop.ofList r vs
+      c ()
 
   let inline ofResizeArray (vs : ResizeArray<'T>) : Stream<'T> =
     fun r c ->
-      Loop.ofResizeArray vs r 0 |> c
+      Loop.ofResizeArray vs r 0
+      c ()
 
   let inline range b s e : Stream<'T> =
     if s = 0 then
       raise (ArgumentException ("Step of range can not be 0", "s"))
     elif b <= e && s > 0 then
       fun r c ->
-        Loop.rangeForward s e r b |> c
+        Loop.rangeForward s e r b
+        c ()
     elif e <= b && s < 0 then
       fun r c ->
-        Loop.rangeReverse s e r b |> c
+        Loop.rangeReverse s e r b
+        c ()
     else
       empty
 
   let inline repeat v n : Stream<'T> =
     fun r c ->
-      Loop.repeat v n r 0 |> c
+      Loop.repeat v n r 0
+      c ()
 
   let inline singleton v : Stream<'T> =
     fun r c ->
-      r v |> c
+      r v |> ignore
+      c ()
 
   let inline unfold (f : 'S -> ('T*'S) option) (z : 'S): Stream<'T> =
     fun r c ->
-      Loop.unfold f r z |> c
+      Loop.unfold f r z
+      c ()
 
   // pipes
 
@@ -110,10 +118,10 @@ module Stream =
             ra.Clear ()
             r vs
         ),
-        (fun more ->
-          if more && ra.Count > 0 then
+        (fun () ->
+          if ra.Count > 0 then
             r (ra.ToArray ()) |> ignore
-          c more
+          c ()
         ))
 
   let inline collect (m : 'T -> Stream<'U>) (s : Stream<'T>) : Stream<'U> =
@@ -197,12 +205,10 @@ module Stream =
       let ra = ResizeArray defaultSize
       s.Invoke (
         (fun v -> ra.Add v; true),
-        (fun more ->
-          if more then
-            ra.Sort comp
-            let rec loop i = if i < ra.Count && r ra.[i] then loop (i + 1)
-            Loop.ofResizeArray ra r 0 |> ignore
-          c more
+        (fun () ->
+          ra.Sort comp
+          Loop.ofResizeArray ra r 0 |> ignore
+          c ()
         ))
 
   let inline take n (s : Stream<'T>) : Stream<'T> =

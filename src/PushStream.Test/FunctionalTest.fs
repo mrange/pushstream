@@ -30,8 +30,10 @@ let between v b e =
   let bb = min b e
   let ee = max b e
   let dd = ee - bb
-  let aa = (v - bb) % dd |> abs
-  bb + aa
+  if dd = 0 then bb
+  else
+    let aa = (v - bb) % dd |> abs
+    bb + aa
 
 type FilterOption =
   | All
@@ -76,6 +78,26 @@ type Properties() =
   static let skip n (vs : #seq<'T>) = vs.Skip(n).ToArray()
   static let take n (vs : #seq<'T>) = vs.Take(n).ToArray()
 
+  // utility
+  static member ``test clamp`` (v : int) (x : int) (y : int) =
+    let b = min x y
+    let e = max x y
+    let v = clamp v b e
+    v >= b && v <= e
+
+  static member ``test between`` (v : int) (x : int) (y : int) =
+    let b = min x y
+    let e = max x y
+    let v = between v x y
+    v >= b && v <= e
+
+  static member ``test Between1And10`` (b : Between1And10) =
+    let v = b.Value
+    v >= 1 && v <= 10
+
+  static member ``test Between10And100`` (b : Between10And100) =
+    let v = b.Value
+    v >= 10 && v <= 100
 
   // sources
   static member ``test empty`` () =
@@ -232,19 +254,19 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.toArray
     e = a
 
-  static member ``test complex chain`` (c : int) (vs : int []) =
-    let c = between c 0 100
+  static member ``test complex chain`` (vs : int []) =
     let f = fun v -> v % 2 = 0
     let m = (+) 1
     let e =
-      [|0..1..c|]
+      vs
       |> Array.filter f
       |> chunkBySize 10
       |> Array.concat
       |> Array.sort
       |> Array.map m
     let a =
-      Stream.range 0 1 c
+      vs
+      |> Stream.ofArray
       |> Stream.filter f
       |> Stream.chunkBySize 10
       |> Stream.collect Stream.ofArray
@@ -253,8 +275,7 @@ type Properties() =
       |> Stream.toArray
     e = a
 
-  static member ``test complex chains`` (c : int) (chains : Chain []) =
-    let c       = between c 0 100
+  static member ``test complex chains`` (chains : Chain []) (vs : int [])=
     let chains  = chains |> take 10
     let rec loop i e a =
       if i < chains.Length then
@@ -267,7 +288,7 @@ type Properties() =
           | Take        j -> e |> take j.Value                        , a |> Stream.take j.Value
         loop (i + 1) e a
       else e, a
-    let se, sa = loop 0 ([|0..1..c|]) (Stream.range 0 1 c)
+    let se, sa = loop 0 vs (vs |> Stream.ofArray)
     let e = se
     let a = sa |> Stream.toArray
     e = a
@@ -277,6 +298,7 @@ type Properties() =
   //  Also needs test to make sure early returns actually are early returning
 
 let test () =
+  Properties.``test complex chains`` [|Take (Between10And100 19); Sort|] [|0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0|] |> ignore
 #if DEBUG
   let config = Config.Quick
 #else
