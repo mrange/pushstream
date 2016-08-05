@@ -55,6 +55,7 @@ type Between10And100 =
 
 type Chain =
   | ChunkBySize of Between1And10  // TODO: Make ChunkBySize recursive
+  | DistinctBy
   | Map         of int
   | Skip        of Between1And10
   | Sort
@@ -307,6 +308,7 @@ type Properties() =
         let e, a =
           match chains.[i] with
           | ChunkBySize j -> e |> chunkBySize j.Value |> Array.concat , a |> Stream.chunkBySize j.Value |> Stream.collect Stream.ofArray
+          | DistinctBy    -> e |> Seq.distinctBy int64 |> Seq.toArray , a |> Stream.distinctBy int64
           | Map         j -> e |> Array.map ((+) j)                   , a |> Stream.map ((+) j)
           | Skip        j -> e |> skip j.Value                        , a |> Stream.skip j.Value
           | Sort          -> e |> Array.sort                          , a |> Stream.sortBy id
@@ -328,8 +330,11 @@ let test () =
   |> ignore
 
 #if DEBUG
-  let config = Config.Quick
+  let maxTest = 1000
 #else
-  let config = { Config.Quick with MaxTest = 1000; MaxFail = 1000 }
+  let maxTest = 1000
 #endif
+
+  let config = { Config.Quick with MaxTest = maxTest; MaxFail = maxTest }
+
   Check.All<Properties> config
