@@ -58,6 +58,11 @@ let imperativeTest n =
       s
   loop 0L (int64 n)
 
+open System.Linq
+
+let linqTest n =
+  Enumerable.Range(0, n + 1).Select(int64).Where(fun v -> v % 2L = 0L).Select((+) 1L).Sum()
+
 let nessosTest n =
   Stream.initInfinite int64
   |> Stream.take    (n + 1)
@@ -89,6 +94,7 @@ let test (path : string) =
       "imperative"  , imperativeTest  , false
       "trivialpush" , trivialTest     , false
       "pushstream"  , pushTest        , false
+      "linq"        , linqTest        , false
       "nessos"      , nessosTest      , false
       "array"       , arrayTest       , false
     |]
