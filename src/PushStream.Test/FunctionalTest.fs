@@ -168,6 +168,12 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.choose c |> Stream.toArray
     e = a
 
+  static member ``test chunkBySize`` (sz : int) (vs : int []) =
+    sz > 0 ==> fun () ->
+      let e = vs |> chunkBySize sz
+      let a = vs |> Stream.ofArray |> Stream.chunkBySize sz |> Stream.toArray
+      e = a
+
   static member ``test collect`` (vs : int [] []) =
     let e = vs |> Array.collect id
     let a = vs |> Stream.ofArray |> Stream.collect Stream.ofArray |> Stream.toArray
@@ -179,6 +185,11 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.collect (Stream.ofArray >> Stream.take n) |> Stream.toArray
     e = a
 
+  static member ``test distinctBy`` (vs : int []) =
+    let e = vs |> Seq.distinctBy int64 |> Seq.toArray
+    let a = vs |> Stream.ofArray |> Stream.distinctBy int64 |> Stream.toArray
+    e = a
+
   static member ``test filter`` (fo : FilterOption) (vs : int []) =
     let f v =
       match fo with
@@ -187,6 +198,11 @@ type Properties() =
       | Mod2    -> v % 2 = 0
     let e = vs |> Array.filter f
     let a = vs |> Stream.ofArray |> Stream.filter f |> Stream.toArray
+    e = a
+
+  static member ``test intersectBy`` (f : int []) (s : int []) =
+    let e = f.Intersect(s, Stream.Internals.equality int64).ToArray ()
+    let a = Stream.intersectBy int64 (f |> Stream.ofArray) (s |> Stream.ofArray) |> Stream.toArray
     e = a
 
   static member ``test map`` (i : int) (vs : int []) =
@@ -218,11 +234,10 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.take t |> Stream.toArray
     e = a
 
-  static member ``test chunkBySize`` (sz : int) (vs : int []) =
-    sz > 0 ==> fun () ->
-      let e = vs |> chunkBySize sz
-      let a = vs |> Stream.ofArray |> Stream.chunkBySize sz |> Stream.toArray
-      e = a
+  static member ``test unionBy`` (f : int []) (s : int []) =
+    let e = f.Union(s, Stream.Internals.equality int64).ToArray ()
+    let a = Stream.unionBy int64 (f |> Stream.ofArray) (s |> Stream.ofArray) |> Stream.toArray
+    e = a
 
   // sinks
   static member ``test first`` (dv : int) (vs : int []) =
