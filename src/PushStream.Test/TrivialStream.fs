@@ -16,7 +16,7 @@
 module TrivialStream
 
 // The trivial stream is a very simplistic push stream that doesn't support
-//  early exits (useful for first) or completion events (useful for sort)
+//  early exits (useful for first)
 //  The trivial stream is useful as basic stream to measure performance against
 
 type Receiver<'T> = 'T            -> unit

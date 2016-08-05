@@ -86,11 +86,11 @@ open System.Diagnostics
 let test (path : string) =
   let testCases =
     [|
-      "array"       , arrayTest       , false
       "imperative"  , imperativeTest  , false
       "trivialpush" , trivialTest     , false
-      "nessos"      , nessosTest      , false
       "pushstream"  , pushTest        , false
+      "nessos"      , nessosTest      , false
+      "array"       , arrayTest       , false
     |]
   use out                   = new System.IO.StreamWriter (path)
   let write (msg : string)  = out.WriteLine msg

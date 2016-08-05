@@ -18,7 +18,6 @@ Simplicity means fewer potential bugs and simpler to extend. Let's compare the
 let inline singleton v : Stream<'T> =
   fun r c ->
     r v |> ignore
-    c ()
 ```
 
 ### Nessos
