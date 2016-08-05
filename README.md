@@ -40,8 +40,8 @@ let singleton (source: 'T) : Stream<'T> =
                         member __.Dispose() = ()} })
 ```
 
-`Nessos` uses a more complex definition because it supports things like
-parallelism which `PushStream` don't.
+`Nessos` uses a more complex definition because it supports pull & push data pipeline.
+`PushStream` is strictly a push data pipeline.
 
 ## Lower overhead
 
