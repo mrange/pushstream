@@ -23,11 +23,31 @@ type Stream<'T>   = Receiver<'T>  -> unit
 /// <summary>Basic operations on streams.</summary>
 [<RequireQualifiedAccess>]
 module Stream =
+  open System.Collections.Generic
+
   module Internals =
-    open System.Collections.Generic
 
     let defaultSize       = 16
     let inline adapt s    = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
+
+    let inline equality by =
+      { new IEqualityComparer<_> with
+        member this.Equals (x, y) =
+          let xx = by x
+          let yy = by y
+          xx = yy
+        member this.GetHashCode x =
+          let xx = by x
+          xx.GetHashCode ()
+      }
+
+    let inline comparer by =
+      { new IComparer<_> with
+        member this.Compare (x, y) =
+          let xx = by x
+          let yy = by y
+          compare xx yy
+      }
 
     module Loop =
       // Function local loop functions currently make F# 4.0 create unnecessary loop objects
@@ -43,7 +63,7 @@ module Stream =
         match l with
         | x::xs -> if r x then ofList r xs
         | _     -> ()
-      let rec ofResizeArray (vs : ResizeArray<_>) r i = if i < vs.Count then if r vs.[i] then ofResizeArray vs r (i + 1)
+      let rec ofResizeArray (vs : ResizeArray<'T>) r i = if i < vs.Count then if r vs.[i] then ofResizeArray vs r (i + 1)
       let rec ofSeq (e : #IEnumerator<'T>) r =
         let mutable e = e
         // Doesn't use tail-rec because of e needs to be mutabler
@@ -171,6 +191,7 @@ module Stream =
         )
       if ra.Count > 0 then
         r (ra.ToArray ()) |> ignore
+        ra.Clear ()
 
   /// <summary>For each element of the stream, applies the given function. Concatenates all the results and return the combined stream.</summary>
   /// <param name="m">The function to transform each input element into a substream to be concatenated.</param>
@@ -197,6 +218,38 @@ module Stream =
         )
       printfn "STREAM: %s - Completed" name
 
+  /// <summary>Returns a stream that contains no duplicate entries according to the
+  /// generic hash and equality comparisons on the keys returned by the given key-generating function.
+  /// If an element occurs multiple times in the stream then the later occurrences are discarded.</summary>
+  /// <param name="by">A function transforming the stream items into comparable keys.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The result stream.</returns>
+  let inline distinctBy (by : 'T -> 'U) (s : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let seen = HashSet ()
+      s (fun v -> if seen.Add (by v) then r v else true)
+      seen.Clear ()
+
+  /// <summary>Returns a stream that is the difference two streams with respect to the
+  /// generic hash and equality comparisons on the keys returned by the given key-generating function.
+  /// </summary>
+  /// <param name="by">A function transforming the stream items into comparable keys.</param>
+  /// <param name="fs">The first input stream.</param>
+  /// <param name="fs">The second input stream.</param>
+  /// <returns>The result stream.</returns>
+  let exceptBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let seen = Dictionary ()
+      fs (fun v -> let u = by v in if seen.ContainsKey u |> not then seen.Add (u, v); true else true)
+      ss (fun v -> if seen.Remove (by v) then seen.Count > 0 else true)
+      if seen.Count > 0 then
+        let ra = ResizeArray seen.Count
+        for kv in seen do
+          ra.Add kv.Value
+        seen.Clear ()
+        Loop.ofResizeArray ra r 0
+        ra.Clear ()
+
   /// <summary>Returns a new stream containing only the elements of the collection
   /// for which the given predicate returns "true"</summary>
   /// <param name="f">The function to test the input elements.</param>
@@ -205,6 +258,35 @@ module Stream =
   let inline filter (f : 'T -> bool) (s : Stream<'T>) : Stream<'T> =
     fun r ->
       s (fun v -> if f v then r v else true)
+
+  /// <summary>Returns a stream that is the intersection of two streams with respect to the
+  /// generic hash and equality comparisons on the keys returned by the given key-generating function.
+  /// </summary>
+  /// <param name="by">A function transforming the stream items into comparable keys.</param>
+  /// <param name="fs">The first input stream.</param>
+  /// <param name="fs">The second input stream.</param>
+  /// <returns>The result stream.</returns>
+  let inline intersectBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let seen = HashSet ()
+      ss (fun v -> seen.Add (by v) |> ignore; true)
+      fs (fun v -> if seen.Remove (by v) then r v && seen.Count > 0 else true)
+
+  /// <summary>Returns a stream that is the union of two streams with respect to the
+  /// generic hash and equality comparisons on the keys returned by the given key-generating function.
+  /// </summary>
+  /// <param name="by">A function transforming the stream items into comparable keys.</param>
+  /// <param name="fs">The first input stream.</param>
+  /// <param name="fs">The second input stream.</param>
+  /// <returns>The result stream.</returns>
+  let inline unionBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let seen          = HashSet ()
+      let mutable cont  = true
+      fs (fun v -> if seen.Add (by v) then cont <- cont && r v; cont else true)
+      if cont then
+        ss (fun v -> if seen.Add (by v) then r v else true)
+      seen.Clear ()
 
   /// <summary>Builds a new stream whose elements are the results of applying the given function
   /// to each of the elements of the collection.</summary>
@@ -241,17 +323,14 @@ module Stream =
   /// <param name="projection">The function to transform the stream elements into the type to be compared.</param>
   /// <param name="s">The input stream.</param>
   /// <returns>The sorted stream.</returns>
-  let inline sortBy (f : 'T -> 'U) (s : Stream<'T>) : Stream<'T> =
-    let comp = Comparison<'T> (fun l r ->
-      let lv = f l
-      let rv = f r
-      compare lv rv
-      )
+  let inline sortBy (by : 'T -> 'U) (s : Stream<'T>) : Stream<'T> =
+    let c = comparer by
     fun r ->
       let ra = ResizeArray defaultSize
       s (fun v -> ra.Add v; true)
-      ra.Sort comp
+      ra.Sort c
       Loop.ofResizeArray ra r 0
+      ra.Clear ()
 
   /// <summary>Returns the first <c>n</c> elements of the stream.</summary>
   /// <param name="n">The number of items to take.</param>
@@ -313,7 +392,9 @@ module Stream =
   let inline toArray (s : Stream<'T>) : 'T [] =
     let ra = ResizeArray defaultSize
     s (fun v -> ra.Add v; true)
-    ra.ToArray ()
+    let vs = ra.ToArray ()
+    ra.Clear ()
+    vs
 
   // aliases
 
@@ -329,6 +410,6 @@ module Stream =
   let inline return_ v = singleton v
 
   /// <summary>Returns a new stream that contains the elements of each the streams in order.</summary>
-  /// <param name="s">The input sequence of streams.</param>
+  /// <param name="s">The input stream of streams.</param>
   /// <returns>The resulting concatenated stream.</returns>
   let inline concat s  = collect id s
