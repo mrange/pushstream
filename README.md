@@ -50,11 +50,11 @@ benefits.
 
 Let's compare some data pipelines:
 
-  1. Array module
-  2. Imperative (not really a data pipeline but useful for sanity check)
-  3. TrivialPush (a reference push stream that can only support the most basic features of data pipelines)
+  1. Imperative (not really a data pipeline but useful for sanity check)
+  2. TrivialPush (a reference push stream that can only support the most basic features of data pipelines)
+  3. PushStream
   4. Nessos
-  5. PushStream
+  5. LINQ (Why not F# Seq? Because Seq overhead is significantly higher than LINQ although both are based around `IEnumerable<>`)
 
 We use a simple data pipe line to measure overhead:
 
@@ -94,8 +94,8 @@ GC overhead than `Nessos`.
 
 ## Conclusion
 
-`Nessos` is a great library but `PushStream` offers simplicity and lower overhead
-when you don't need all features of `Nessos`.
+`Nessos` is a great data pipeline library but `PushStream` offers simplicity and lower 
+overhead if you don't need all features of `Nessos`.
 
   [1]: img/perf_cpu.png
   [2]: img/perf_cc.png

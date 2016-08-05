@@ -96,13 +96,13 @@ let test (path : string) =
       "pushstream"  , pushTest        , false
       "linq"        , linqTest        , false
       "nessos"      , nessosTest      , false
-      "array"       , arrayTest       , false
+//      "array"       , arrayTest       , false
     |]
   use out                   = new System.IO.StreamWriter (path)
   let write (msg : string)  = out.WriteLine msg
   let writef fmt            = FSharp.Core.Printf.kprintf write fmt
 
-  write "Name\tTotal\tOuter\tInner\tElapsed\tCC0\tCC1\tCC2\tResult"
+  write "Name\tTotal\tOuter\tInner\tElapsed\tCC\tCC0\tCC1\tCC2\tResult"
 
   let total   = 100000000
   let outers =
@@ -116,6 +116,7 @@ let test (path : string) =
     for name, a, ibreak in testCases do
       printfn "Running %s with total=%d, outer=%d, inner=%d ..." name total outer inner
       let v, ms, cc0, cc1, cc2 = time outer (fun () -> a inner)
-      printfn "  ... %d ms, cc0=%d, cc1=%d, cc2=%d, result=%A" ms cc0 cc1 cc2 v
-      writef "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" name total outer inner ms cc0 cc1 cc2 v
+      let cc = cc0 + cc1 + cc2
+      printfn "  ... %d ms, cc=%d, cc0=%d, cc1=%d, cc2=%d, result=%A" ms cc cc0 cc1 cc2 v
+      writef "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" name total outer inner ms cc cc0 cc1 cc2 v
       if obreak && ibreak && Debugger.IsAttached then Debugger.Break ()
