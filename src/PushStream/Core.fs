@@ -159,7 +159,7 @@ module Stream =
   let inline chunkBySize size (s : Stream<'T>) : Stream<'T []> =
     let size = max 1 size
     fun r ->
-      let ra = ResizeArray defaultSize
+      let ra = ResizeArray size
       s (fun v ->
           ra.Add v
           if ra.Count < size then

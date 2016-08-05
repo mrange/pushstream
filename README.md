@@ -79,7 +79,7 @@ The performance run is designed so that the total amount of useful work is the s
 so that the numbers can be compared. A greater amount of test runs there for implies
 smaller data sets.
 
-We see `Nessos` and `PushStream` perform comparable until the streamns start becoming
+We see `Nessos` and `PushStream` perform comparable until the streams start becoming
 quite small (~10 elements). The larger overhead of `Nessos` streams then pushes up
 the CPU time needed.
 
