@@ -193,7 +193,7 @@ type Properties() =
 
   static member ``test exceptBy`` (f : int []) (s : int []) =
     let e = f.Except(s, Stream.Internals.equality int64).ToArray ()
-    let a = Stream.exceptBy int64 (f |> Stream.ofArray) (s |> Stream.ofArray) |> Stream.toArray
+    let a = f |> Stream.ofArray |> Stream.exceptBy int64 (s |> Stream.ofArray) |> Stream.toArray
     e = a
 
   static member ``test filter`` (fo : FilterOption) (vs : int []) =
@@ -208,7 +208,7 @@ type Properties() =
 
   static member ``test intersectBy`` (f : int []) (s : int []) =
     let e = f.Intersect(s, Stream.Internals.equality int64).ToArray ()
-    let a = Stream.intersectBy int64 (f |> Stream.ofArray) (s |> Stream.ofArray) |> Stream.toArray
+    let a = f |> Stream.ofArray |> Stream.intersectBy int64 (s |> Stream.ofArray) |> Stream.toArray
     e = a
 
   static member ``test map`` (i : int) (vs : int []) =
@@ -242,7 +242,7 @@ type Properties() =
 
   static member ``test unionBy`` (f : int []) (s : int []) =
     let e = f.Union(s, Stream.Internals.equality int64).ToArray ()
-    let a = Stream.unionBy int64 (f |> Stream.ofArray) (s |> Stream.ofArray) |> Stream.toArray
+    let a = f |> Stream.ofArray |> Stream.unionBy int64 (s |> Stream.ofArray) |> Stream.toArray
     e = a
 
   // sinks

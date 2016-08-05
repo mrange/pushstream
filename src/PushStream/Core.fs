@@ -234,10 +234,10 @@ module Stream =
   /// generic hash and equality comparisons on the keys returned by the given key-generating function.
   /// </summary>
   /// <param name="by">A function transforming the stream items into comparable keys.</param>
+  /// <param name="ss">The second input stream.</param>
   /// <param name="fs">The first input stream.</param>
-  /// <param name="fs">The second input stream.</param>
   /// <returns>The result stream.</returns>
-  let exceptBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+  let exceptBy (by : 'T -> 'U) (ss : Stream<'T>) (fs : Stream<'T>) : Stream<'T> =
     fun r ->
       let seen = Dictionary ()
       fs (fun v -> let u = by v in if seen.ContainsKey u |> not then seen.Add (u, v); true else true)
@@ -263,10 +263,10 @@ module Stream =
   /// generic hash and equality comparisons on the keys returned by the given key-generating function.
   /// </summary>
   /// <param name="by">A function transforming the stream items into comparable keys.</param>
-  /// <param name="fs">The first input stream.</param>
+  /// <param name="ss">The first input stream.</param>
   /// <param name="fs">The second input stream.</param>
   /// <returns>The result stream.</returns>
-  let inline intersectBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+  let inline intersectBy (by : 'T -> 'U) (ss : Stream<'T>) (fs : Stream<'T>) : Stream<'T> =
     fun r ->
       let seen = HashSet ()
       ss (fun v -> seen.Add (by v) |> ignore; true)
@@ -276,10 +276,10 @@ module Stream =
   /// generic hash and equality comparisons on the keys returned by the given key-generating function.
   /// </summary>
   /// <param name="by">A function transforming the stream items into comparable keys.</param>
-  /// <param name="fs">The first input stream.</param>
+  /// <param name="ss">The first input stream.</param>
   /// <param name="fs">The second input stream.</param>
   /// <returns>The result stream.</returns>
-  let inline unionBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+  let inline unionBy (by : 'T -> 'U) (ss : Stream<'T>) (fs : Stream<'T>) : Stream<'T> =
     fun r ->
       let seen          = HashSet ()
       let mutable cont  = true
