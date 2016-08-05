@@ -190,6 +190,11 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.distinctBy int64 |> Stream.toArray
     e = a
 
+  static member ``test exceptBy`` (f : int []) (s : int []) =
+    let e = f.Except(s, Stream.Internals.equality int64).ToArray ()
+    let a = Stream.exceptBy int64 (f |> Stream.ofArray) (s |> Stream.ofArray) |> Stream.toArray
+    e = a
+
   static member ``test filter`` (fo : FilterOption) (vs : int []) =
     let f v =
       match fo with

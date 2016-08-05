@@ -231,7 +231,18 @@ module Stream =
       seen.Clear ()
 
   // TODO:
-  // let inline exceptBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+  let exceptBy (by : 'T -> 'U) (fs : Stream<'T>) (ss : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let seen = Dictionary ()
+      fs (fun v -> let u = by v in if seen.ContainsKey u |> not then seen.Add (u, v); true else true)
+      ss (fun v -> if seen.Remove (by v) then seen.Count > 0 else true)
+      if seen.Count > 0 then
+        let ra = ResizeArray seen.Count
+        for kv in seen do
+          ra.Add kv.Value
+        seen.Clear ()
+        Loop.ofResizeArray ra r 0
+        ra.Clear ()
 
   /// <summary>Returns a new stream containing only the elements of the collection
   /// for which the given predicate returns "true"</summary>
