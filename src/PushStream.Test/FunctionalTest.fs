@@ -77,6 +77,17 @@ type Properties() =
 
     ra.ToArray ()
 
+  static let mapFold m z (vs : 'T []) =
+    let e = vs.Length - 1
+    let r = Array.zeroCreate vs.Length
+    let mutable acc = z
+    for i = 0 to e do
+      let v = vs.[i]
+      let nv, nacc = m acc v
+      r.[i] <- nv
+      acc <- nacc
+    r
+
   static let skip n (vs : #seq<'T>) = vs.Skip(n).ToArray()
   static let take n (vs : #seq<'T>) = vs.Take(n).ToArray()
 
@@ -222,6 +233,12 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.map m |> Stream.toArray
     e = a
 
+  static member ``test mapFold`` (i : int) (vs : int []) =
+    let m = fun s v -> let acc = s + int64 v in acc, acc
+    let e = vs |> mapFold m 0L
+    let a = vs |> Stream.ofArray |> Stream.mapFold m 0L  |> Stream.toArray
+    e = a
+
   static member ``test mapi`` (i : int) (vs : int []) =
     let m idx v = idx, v + i |> int64
     let e = vs |> Array.mapi m
@@ -284,6 +301,16 @@ type Properties() =
     let f = (=) v
     let e = vs |> Array.forall f
     let a = vs |> Stream.ofArray |> Stream.forall f
+    e = a
+
+  static member ``test max`` (vs : int []) =
+    let e = if vs.Length > 0 then vs |> Array.max else Int32.MinValue
+    let a = vs |> Stream.ofArray |> Stream.max Int32.MinValue
+    e = a
+
+  static member ``test min`` (vs : int []) =
+    let e = if vs.Length > 0 then vs |> Array.min else Int32.MaxValue
+    let a = vs |> Stream.ofArray |> Stream.min Int32.MaxValue
     e = a
 
   static member ``test reduce`` (vs : int []) =

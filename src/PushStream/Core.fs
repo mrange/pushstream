@@ -284,6 +284,56 @@ module Stream =
       ss (fun v -> seen.Add (by v) |> ignore; true)
       fs (fun v -> if seen.Remove (by v) then r v && seen.Count > 0 else true)
 
+  /// <summary>Builds a new stream whose elements are the results of applying the given function
+  /// to each of the elements of the collection.</summary>
+  /// <param name="m">The function to transform elements from the input stream.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The stream of transformed elements.</returns>
+  let inline map (m : 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
+    fun r ->
+      s (fun v -> r (m v))
+
+  /// <summary>Combines map and fold. Builds a new collection whose elements are the results of applying the given function
+  /// to each of the elements of the collection</summary>
+  /// <param name="m">The function to transform elements from the input collection and accumulate the final value.</param>
+  /// <param name="z">The initial state.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The collection of transformed elements.</returns>
+  let inline mapFold (m : 'S -> 'T -> 'U*'S) z (s : Stream<'T>) : Stream<'U> =
+    fun r ->
+      let mutable acc = z
+      s (fun v -> let u, nacc = m acc v in acc <- nacc; r u)
+
+  /// <summary>Builds a new stream whose elements are the results of applying the given function
+  /// to each of the elements of the collection. The integer index passed to the
+  /// function indicates the index (from 0) of element being transformed.</summary>
+  /// <param name="m">The function to transform elements and their indices.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The stream of transformed elements.</returns>
+  let inline mapi (m : int -> 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
+    let m = adapt m
+    fun r ->
+      let mutable i = -1
+      s (fun v -> i <- i + 1; r (m.Invoke (i, v)))
+
+  /// <summary>Returns the greatest of all elements of the stream</summary>
+  /// <param name="min">The initial value to compare against.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The largest element of the stream.</returns>
+  let inline max min (s : Stream<'T>) : 'T =
+    let mutable acc = min
+    s (fun v -> acc <- max acc v; true)
+    acc
+
+  /// <summary>Returns the smallest of all elements of the stream</summary>
+  /// <param name="min">The initial value to compare against.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The smallest element of the stream.</returns>
+  let inline min max (s : Stream<'T>) : 'T =
+    let mutable acc = max
+    s (fun v -> acc <- min acc v; true)
+    acc
+
   /// <summary>Returns a stream that is the union of two streams with respect to the
   /// generic hash and equality comparisons on the keys returned by the given key-generating function.
   /// </summary>
@@ -299,27 +349,6 @@ module Stream =
       if cont then
         ss (fun v -> if seen.Add (by v) then r v else true)
       seen.Clear ()
-
-  /// <summary>Builds a new stream whose elements are the results of applying the given function
-  /// to each of the elements of the collection.</summary>
-  /// <param name="m">The function to transform elements from the input stream.</param>
-  /// <param name="s">The input stream.</param>
-  /// <returns>The stream of transformed elements.</returns>
-  let inline map (m : 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
-    fun r ->
-      s (fun v -> r (m v))
-
-  /// <summary>Builds a new stream whose elements are the results of applying the given function
-  /// to each of the elements of the collection. The integer index passed to the
-  /// function indicates the index (from 0) of element being transformed.</summary>
-  /// <param name="m">The function to transform elements and their indices.</param>
-  /// <param name="s">The input stream.</param>
-  /// <returns>The stream of transformed elements.</returns>
-  let inline mapi (m : int -> 'T -> 'U) (s : Stream<'T>) : Stream<'U> =
-    let m = adapt m
-    fun r ->
-      let mutable i = -1
-      s (fun v -> i <- i + 1; r (m.Invoke (i, v)))
 
   /// <summary>Returns a new stream with the elements in reverse order.</summary>
   /// <param name="s">The input stream.</param>
