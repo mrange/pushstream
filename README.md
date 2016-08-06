@@ -97,5 +97,9 @@ GC overhead than `Nessos`.
 `Nessos` is a great data pipeline library but `PushStream` offers simplicity and lower 
 overhead if you don't need all features of `Nessos`.
 
+## TODO
+
+  1. Unsure on the ordering of arguments for append/unionBy etc. On one hand I read this: `let a = f |> Stream.append s` as `s` is append to `f`. OTOH `let a = Stream.append s f` reads as `f` is appended to `s`.
+
   [1]: img/perf_cpu.png
   [2]: img/perf_cc.png

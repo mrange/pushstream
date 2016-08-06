@@ -159,6 +159,11 @@ type Properties() =
 
   // pipes
 
+  static member ``test append`` (f : int []) (s : int []) =
+    let e = s |> Array.append f
+    let a = f |> Stream.ofArray |> Stream.append (s |> Stream.ofArray) |> Stream.toArray
+    e = a
+
   static member ``test choose`` (v : int) (fo : FilterOption) (vs : int []) =
     let c v =
       match fo with
@@ -223,6 +228,11 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.mapi m |> Stream.toArray
     e = a
 
+  static member ``test rev`` (vs : int []) =
+    let e = vs |> Array.rev
+    let a = vs |> Stream.ofArray |> Stream.rev |> Stream.toArray
+    e = a
+
   static member ``test skip`` (s : int) (vs : int []) =
     let s = s % 10
     let e = vs |> skip s
@@ -246,6 +256,12 @@ type Properties() =
     e = a
 
   // sinks
+  static member ``test exists`` (v : int8) (vs : int8 []) =
+    let f = (=) v
+    let e = vs |> Array.exists f
+    let a = vs |> Stream.ofArray |> Stream.exists f
+    e = a
+
   static member ``test first`` (dv : int) (vs : int []) =
     let e = if vs.Length > 0 then vs.[0] else dv
     let a = vs |> Stream.ofArray |> Stream.first dv
@@ -264,6 +280,12 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.fold f z
     e = a
 
+  static member ``test forall`` (v : int8) (vs : int8 []) =
+    let f = (=) v
+    let e = vs |> Array.forall f
+    let a = vs |> Stream.ofArray |> Stream.forall f
+    e = a
+
   static member ``test reduce`` (vs : int []) =
     let r = (+)
     let e = if vs.Length > 0 then vs |> Array.reduce r else 0
@@ -278,6 +300,11 @@ type Properties() =
   static member ``test toArray`` (vs : int []) =
     let e = vs
     let a = vs |> Stream.ofArray |> Stream.toArray
+    e = a
+
+  static member ``test tryFirst`` (vs : int []) =
+    let e = if vs.Length > 0 then vs.[0] |> Some else None
+    let a = vs |> Stream.ofArray |> Stream.tryFirst
     e = a
 
   static member ``test complex chain`` (vs : int []) =

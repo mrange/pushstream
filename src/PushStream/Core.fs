@@ -58,12 +58,13 @@ module Stream =
       //    let rec rangeForward s e r i = if i <= e && r i then rangeForward s e r (i + s)
       //  Or:
       //    let rec rangeForward s e r i = let mutable i = i in while i <= e && r i do i <- i + s
+      let rec resizeArrayForward (vs : ResizeArray<'T>) r i = if i < vs.Count then if r vs.[i] then resizeArrayForward vs r (i + 1)
+      let rec resizeArrayReverse (vs : ResizeArray<'T>) r i = if i >= 0 then if r vs.[i] then resizeArrayReverse vs r (i - 1)
       let rec ofArray (vs : 'T []) r i = if i < vs.Length then if r vs.[i] then ofArray vs r (i + 1)
       let rec ofList r l =
         match l with
         | x::xs -> if r x then ofList r xs
         | _     -> ()
-      let rec ofResizeArray (vs : ResizeArray<'T>) r i = if i < vs.Count then if r vs.[i] then ofResizeArray vs r (i + 1)
       let rec ofSeq (e : #IEnumerator<'T>) r =
         let mutable e = e
         // Doesn't use tail-rec because of e needs to be mutabler
@@ -107,7 +108,7 @@ module Stream =
   /// <returns>The stream of elements from the ResizeArray.</returns>
   let inline ofResizeArray (vs : ResizeArray<'T>) : Stream<'T> =
     fun r ->
-      Loop.ofResizeArray vs r 0
+      Loop.resizeArrayForward vs r 0
 
   /// <summary>Builds a stream from the given seq.</summary>
   /// <param name="vs">The input seq.</param>
@@ -161,6 +162,17 @@ module Stream =
       Loop.unfold f r z
 
   // pipes
+
+  /// <summary>Wraps the two given streams as a single concatenated stream.</summary>
+  /// <param name="ss">The second input stream.</param>
+  /// <param name="fs">The first input stream.</param>
+  /// <returns>The resulting strea.</returns>
+  let inline append (ss : Stream<'T>) (fs : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let mutable cont  = true
+      fs (fun v -> cont <- cont && r v; cont)
+      if cont then
+        ss r
 
   /// <summary>Applies the given function to each element of the stream. Returns
   /// the stream comprised of the results <c>x</c> for each element where
@@ -247,7 +259,7 @@ module Stream =
         for kv in seen do
           ra.Add kv.Value
         seen.Clear ()
-        Loop.ofResizeArray ra r 0
+        Loop.resizeArrayForward ra r 0
         ra.Clear ()
 
   /// <summary>Returns a new stream containing only the elements of the collection
@@ -309,6 +321,16 @@ module Stream =
       let mutable i = -1
       s (fun v -> i <- i + 1; r (m.Invoke (i, v)))
 
+  /// <summary>Returns a new stream with the elements in reverse order.</summary>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The reversed stream.</returns>
+  let inline rev (s : Stream<'T>) : Stream<'T> =
+    fun r ->
+      let ra = ResizeArray defaultSize
+      s (fun v -> ra.Add v; true)
+      Loop.resizeArrayReverse ra r (ra.Count - 1)
+      ra.Clear ()
+
   /// <summary>Returns the stream after removing the first <c>n</c> elements.</summary>
   /// <param name="n">The number of elements to skip.</param>
   /// <param name="s">The input stream.</param>
@@ -329,7 +351,7 @@ module Stream =
       let ra = ResizeArray defaultSize
       s (fun v -> ra.Add v; true)
       ra.Sort c
-      Loop.ofResizeArray ra r 0
+      Loop.resizeArrayForward ra r 0
       ra.Clear ()
 
   /// <summary>Returns the first <c>n</c> elements of the stream.</summary>
@@ -343,6 +365,19 @@ module Stream =
 
   // sinks
 
+  /// <summary>Tests if at least one element of the stream satisfy the given predicate.</summary>
+  /// <param name="f">A function to test an element of the input stream.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>True if at least one element of the stream satisfies the predicate; false otherwise.</returns>
+  let inline exists (f : 'T -> bool) (s : Stream<'T>) : bool =
+    let mutable acc = false
+    s (fun v -> acc <- acc || f v; not acc)
+    acc
+
+  /// <summary>Returns the first element of the stream or <c>dv</c> if stream is empty.</summary>
+  /// <param name="dv">The value to return if stream is empty.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The first element or <c>dv</c>.</returns>
   let inline first dv (s : Stream<'T>) : 'T =
     let mutable acc = dv
     s (fun v -> acc <- v; false)
@@ -362,6 +397,15 @@ module Stream =
     let f = adapt f
     let mutable acc = z
     s (fun v -> acc <- f.Invoke (acc, v); true)
+    acc
+
+  /// <summary>Tests if all elements of the stream satisfy the given predicate.</summary>
+  /// <param name="f">A function to test an element of the input stream.</param>
+  /// <param name="s">The input stream.</param>
+  /// <returns>True if every element of the stream satisfies the predicate; false otherwise.</returns>
+  let inline forall (f : 'T -> bool) (s : Stream<'T>) : bool =
+    let mutable acc = true
+    s (fun v -> acc <- acc && f v; acc)
     acc
 
   /// <summary>Apply a function to each element of the collection, threading an accumulator argument
@@ -395,6 +439,14 @@ module Stream =
     let vs = ra.ToArray ()
     ra.Clear ()
     vs
+
+  /// <summary>Returns the first element of the stream or <c>None</c> if stream is empty.</summary>
+  /// <param name="s">The input stream.</param>
+  /// <returns>The first element or <c>None</c>.</returns>
+  let inline tryFirst (s : Stream<'T>) : 'T option =
+    let mutable acc = None
+    s (fun v -> acc <- Some v; false)
+    acc
 
   // aliases
 
