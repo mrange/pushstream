@@ -161,20 +161,20 @@ module Parallel =
 
   // sources
 
-  let inline pfork (s : Stream<'T>) : ParallelStream<'T, 'T> =
+  let inline fork (s : Stream<'T>) : ParallelStream<'T, 'T> =
     s, Pipe.accept
 
   // pipes
 
-  let inline pfilter (f : 'T -> bool) ((s, p) : ParallelStream<'T, 'TInput>) : ParallelStream<'T, 'TInput> =
+  let inline filter (f : 'T -> bool) ((s, p) : ParallelStream<'T, 'TInput>) : ParallelStream<'T, 'TInput> =
     s, Pipe.filter f p
 
-  let inline pmap (m : 'T -> 'U) ((s, p) : ParallelStream<'T, 'TInput>) : ParallelStream<'U, 'TInput> =
+  let inline map (m : 'T -> 'U) ((s, p) : ParallelStream<'T, 'TInput>) : ParallelStream<'U, 'TInput> =
     s, Pipe.map m p
 
   // sinks
 
-  let pjoin (n : int) ((s, p) : ParallelStream<'T, 'TInput>) : Stream<'T> =
+  let join (n : int) ((s, p) : ParallelStream<'T, 'TInput>) : Stream<'T> =
     if not (n > 0) then failwith "n expected to be greater than 0"
     fun r ->
       use io  = new ConcurrentIO<'TInput, 'T> (n)

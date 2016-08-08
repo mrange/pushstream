@@ -31,8 +31,7 @@ module Pipe =
 
   open Internals
 
-
-// sources
+  // sources
 
   [<GeneralizableValue>]
   let accept<'T> : Pipe<'T, 'T> =
@@ -42,11 +41,15 @@ module Pipe =
   let acceptArray<'T> : Pipe<'T, 'T []> =
     fun r vs -> Loop.acceptArray vs r 0
 
+  // pipes
+
   let inline filter (f : 'T -> bool) (p : Pipe<'T, 'TInput>) : Pipe<'T, 'TInput> =
     fun r -> p (fun v -> if f v then r v else true)
 
   let inline map (m : 'T -> 'U) (p : Pipe<'T, 'TInput>) : Pipe<'U, 'TInput> =
     fun r -> p (fun v -> r (m v))
+
+  // sinks
 
   let inline toArray (p : Pipe<'T, 'TInput>) : Sink<'T [], 'TInput> =
     let ra = ResizeArray defaultSize

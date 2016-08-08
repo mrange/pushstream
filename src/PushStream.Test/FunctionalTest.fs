@@ -21,7 +21,28 @@ open System.Linq
 
 open FsCheck
 
+open FSharp.Core.Printf
+
 module TestCommon =
+
+  let ccout (cc : ConsoleColor) (msg : string) : unit =
+    let occ = Console.ForegroundColor
+    Console.ForegroundColor <- cc
+    try
+      Console.WriteLine msg
+    finally
+      Console.ForegroundColor <- occ
+
+  let highlight msg = ccout ConsoleColor.White  msg
+  let info      msg = ccout ConsoleColor.Gray   msg
+  let success   msg = ccout ConsoleColor.Green  msg
+  let error     msg = ccout ConsoleColor.Red    msg
+
+  let highlightf  f = kprintf highlight f
+  let infof       f = kprintf info      f
+  let successf    f = kprintf success   f
+  let errorf      f = kprintf error     f
+
   let inline clamp v b e =
     if    v < b then b
     elif  e < v then e
@@ -113,7 +134,7 @@ module TestCommon =
 
 open TestCommon
 
-module Stream =
+module Core =
   open PushStream
 
   type Properties() =
@@ -382,7 +403,7 @@ module Stream =
       let a = sa |> Stream.toArray
       e = a
 
-module Pipe =
+module Pipes =
   open PushStream.Pipes
 
   type Properties() =
@@ -429,6 +450,19 @@ module Pipe =
       let p, s  = Pipe.acceptArray |> Pipe.toArray
       p vs && let a = s () in e = a
 
+module Parallelism =
+  open PushStream
+  open PushStream.Parallelism
+
+  type Properties() =
+
+    // fork/join
+
+    static member ``test fork/join n=1`` (vs : int []) =
+      let e = vs
+      let a = vs |> Stream.ofArray |> Parallel.fork |> Parallel.join 1 |> Stream.toArray
+      e = a
+
 let test () =
   // Code coverage for 'Stream.debug'
   PushStream.Stream.range 4 -1 0
@@ -446,6 +480,11 @@ let test () =
 
   let config = { Config.Quick with MaxTest = maxTest; MaxFail = maxTest }
 
+  highlight "Testing test utility properties"
   Check.All<TestCommon.Properties>  config
-  Check.All<Stream.Properties>      config
-  Check.All<Pipe.Properties>        config
+  highlight "Testing stream core properties"
+  Check.All<Core.Properties>        config
+  highlight "Testing pipes properties"
+  Check.All<Pipes.Properties>       config
+  highlight "Testing parallelism properties"
+  Check.All<Parallelism.Properties> config
