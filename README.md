@@ -14,7 +14,7 @@ Simplicity means fewer potential bugs and simpler to extend. Let's compare the
 
 ### PushStream
 
-```
+```fsharp
 let inline singleton v : Stream<'T> =
   fun r c ->
     r v |> ignore
@@ -22,7 +22,7 @@ let inline singleton v : Stream<'T> =
 
 ### Nessos
 
-```
+```fsharp
 let singleton (source: 'T) : Stream<'T> =
       Stream (fun { Complete = complete; Cont = iterf; Cts = cts }->
           let pulled = ref false
@@ -58,7 +58,7 @@ Let's compare some data pipelines:
 
 We use a simple data pipe line to measure overhead:
 
-```
+```fsharp
 let pushTest n =
   Stream.range 0 1 n
   |> Stream.map     int64
