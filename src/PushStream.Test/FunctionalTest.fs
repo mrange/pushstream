@@ -250,6 +250,13 @@ type Properties() =
     let a = vs |> Stream.ofArray |> Stream.rev |> Stream.toArray
     e = a
 
+  static member ``test scan`` (vs : int []) =
+    let f s v = s + int64 v
+    let z = 0L
+    let e = vs |> Array.scan f z
+    let a = vs |> Stream.ofArray |> Stream.scan f z |> Stream.toArray
+    e = a
+
   static member ``test skip`` (s : int) (vs : int []) =
     let s = s % 10
     let e = vs |> skip s

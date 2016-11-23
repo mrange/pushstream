@@ -124,7 +124,7 @@ module Stream =
   /// <param name="e">The end of the range.</param>
   /// <exception cref="System.ArgumentException">Thrown when <c>s</c> is 0.</exception>
   /// <returns>The stream of generated elements.</returns>
-  let inline range b s e : Stream<'T> =
+  let inline range b s e : Stream<int> =
     if s = 0 then
       raise (ArgumentException ("Step of range can not be 0", "s"))
     elif b <= e && s > 0 then
@@ -143,6 +143,23 @@ module Stream =
   let inline replicate n v : Stream<'T> =
     fun r ->
       Loop.replicate n v r 0
+
+  /// <summary>Like fold, but computes on-demand and returns the stream of intermediary and final results.</summary>
+  /// <param name="f">A function that updates the state with each element from the sequence.</param>
+  /// <param name="z">The initial state.</param>
+  /// <param name="s">The input stream </param>
+  /// <returns>The resulting stream of computed states.</returns>
+  let inline scan (f : 'S -> 'T -> 'S) (z : 'S) (s : Stream<'T>) : Stream<'S> =
+    let f = adapt f
+    fun r ->
+      let mutable acc = z
+      let mutable res = true
+      s (fun v ->
+          res <- r acc
+          if res then acc <- f.Invoke (acc, v)
+          res
+        )
+      if res then r acc |> ignore
 
   /// <summary>Returns a stream that contains one item only.</summary>
   /// <param name="v">The input item.</param>
