@@ -175,6 +175,13 @@ type Properties() =
     let a = f |> Stream.ofArray |> Stream.append (s |> Stream.ofArray) |> Stream.toArray
     e = a
 
+  static member ``test append + take`` (n : int) (f : int []) (s : int []) =
+    // Because append has shortcut support
+    let n = (abs n) % (f.Length + s.Length + 1)
+    let e = s |> Array.append f |> take n
+    let a = f |> Stream.ofArray |> Stream.append (s |> Stream.ofArray) |> Stream.take n |> Stream.toArray
+    e = a
+
   static member ``test choose`` (v : int) (fo : FilterOption) (vs : int []) =
     let c v =
       match fo with
@@ -197,7 +204,9 @@ type Properties() =
     e = a
 
   static member ``test collect + take`` (n : int) (vs : int [] []) =
-    let n = n % 5
+    // Because append has shortcut support
+    let l = vs |> Array.collect id |> Array.length
+    let n = (abs n) % (l + 1)
     let e = vs |> Array.collect (take n)
     let a = vs |> Stream.ofArray |> Stream.collect (Stream.ofArray >> Stream.take n) |> Stream.toArray
     e = a
@@ -277,6 +286,13 @@ type Properties() =
   static member ``test unionBy`` (f : int []) (s : int []) =
     let e = f.Union(s, Stream.Internals.equality int64).ToArray ()
     let a = f |> Stream.ofArray |> Stream.unionBy int64 (s |> Stream.ofArray) |> Stream.toArray
+    e = a
+
+  static member ``test unionBy + take`` (n : int) (f : int []) (s : int []) =
+    // Because unionBy has shortcut support
+    let n = (abs n) % (f.Length + s.Length + 1)
+    let e = f.Union(s, Stream.Internals.equality int64) |> take n
+    let a = f |> Stream.ofArray |> Stream.unionBy int64 (s |> Stream.ofArray) |> Stream.take n |> Stream.toArray
     e = a
 
   // sinks

@@ -186,7 +186,7 @@ module Stream =
   /// <returns>The resulting strea.</returns>
   let inline append (ss : Stream<'T>) (fs : Stream<'T>) : Stream<'T> =
     fun r ->
-      let mutable cont  = true
+      let mutable cont = true
       fs (fun v -> cont <- cont && r v; cont)
       if cont then
         ss r
@@ -230,8 +230,9 @@ module Stream =
     fun r ->
       let mutable cont = true
       s (fun v ->
-          let ms = m v
-          ms (fun v -> cont <- cont && r v; cont)
+          if cont then
+            let ms = m v
+            ms (fun v -> cont <- cont && r v; cont)
           cont
         )
 
