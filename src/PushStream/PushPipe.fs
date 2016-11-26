@@ -29,12 +29,9 @@ module Pipe =
     let inline adapt s    = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
 
     module Loop =
-      let rec acceptArray (vs : 'T []) r i =
-        // TODO: && is slower than if .. if
-        if i < vs.Length then r vs.[i] && acceptArray vs r (i + 1) else true
-
-      let rec acceptRangeForward s e r i = if i <= e then r i && acceptRangeForward s e r (i + s) else true
-      let rec acceptRangeReverse s e r i = if i >= e then r i && acceptRangeReverse s e r (i + s) else true
+      let rec acceptArray (vs : 'T []) r i  = if i < vs.Length then r vs.[i] && acceptArray vs r (i + 1) else true
+      let rec acceptRangeForward s e r i    = if i <= e then r i && acceptRangeForward s e r (i + s) else true
+      let rec acceptRangeReverse s e r i    = if i >= e then r i && acceptRangeReverse s e r (i + s) else true
 
 
   open Internals
