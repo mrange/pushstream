@@ -103,7 +103,7 @@ type Properties() =
     let v = clamp v b e
     v >= b && v <= e
 
-  static member ``test between`` (v : int) (x : int) (y : int) =
+  static member ``test wrap`` (v : int) (x : int) (y : int) =
     let b = min x y
     let e = max x y
     let v = wrap v x y
@@ -158,7 +158,7 @@ type Properties() =
       e_ = a
 
   static member ``test replicate`` (v : int64) (n : int) =
-    let n = n % 100
+    let n = wrap n -1 100
     let e = [| for i in 1..n -> v |]
     let a = Stream.replicate n v |> Stream.toArray
     e = a
@@ -169,7 +169,7 @@ type Properties() =
     e = a
 
   static member ``test unfold`` (l : int) =
-    let l = l % 100
+    let l = wrap l -1 100
     let g s =
       if s < l then Some (int64 s, s + 1)
       else None
@@ -203,10 +203,10 @@ type Properties() =
     e = a
 
   static member ``test chunkBySize`` (sz : int) (vs : int []) =
-    sz > 0 ==> fun () ->
-      let e = vs |> chunkBySize sz
-      let a = vs |> Stream.ofArray |> Stream.chunkBySize sz |> Stream.toArray
-      e = a
+    let sz = wrap sz -1 vs.Length
+    let e = vs |> chunkBySize sz
+    let a = vs |> Stream.ofArray |> Stream.chunkBySize sz |> Stream.toArray
+    e = a
 
   static member ``test collect`` (vs : int [] []) =
     let e = vs |> Array.collect id
@@ -277,7 +277,7 @@ type Properties() =
     e = a
 
   static member ``test skip`` (s : int) (vs : int []) =
-    let s = s % 10
+    let s = wrap s -1 (vs.Length + 1)
     let e = vs |> skip s
     let a = vs |> Stream.ofArray |> Stream.skip s |> Stream.toArray
     e = a
@@ -288,7 +288,7 @@ type Properties() =
     e = a
 
   static member ``test take`` (t : int) (vs : int []) =
-    let t = t % 10
+    let t = wrap t -1 (vs.Length + 1)
     let e = vs |> take t
     let a = vs |> Stream.ofArray |> Stream.take t |> Stream.toArray
     e = a
