@@ -1,4 +1,4 @@
-﻿// ----------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------
 // Copyright 2016 Mårten Rånge
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,6 @@ module Pipe =
       let rec acceptRangeForward s e r i    = if i <= e then r i && acceptRangeForward s e r (i + s) else true
       let rec acceptRangeReverse s e r i    = if i >= e then r i && acceptRangeReverse s e r (i + s) else true
 
-
   open Internals
   open System
 
@@ -53,7 +52,7 @@ module Pipe =
 
   [<GeneralizableValue>]
   let inline acceptRange<'T> : Pipe<int, int*int*int> =
-    Pipe <| fun r (b,s,e) -> 
+    Pipe <| fun r (b,s,e) ->
       if s = 0 then
         raise (ArgumentException ("Step of range can not be 0", "s"))
       elif b <= e && s > 0 then
