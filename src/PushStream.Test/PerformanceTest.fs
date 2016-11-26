@@ -71,6 +71,7 @@ let nessosTest n =
   |> Stream.sum
 
 open PushStream
+open PushPipe
 
 let pushTest n =
   Stream.range 0 1 n
@@ -78,6 +79,17 @@ let pushTest n =
   |> Stream.filter  (fun v -> v % 2L = 0L)
   |> Stream.map     ((+) 1L)
   |> Stream.sum
+
+let testPipe =
+  Pipe.acceptRange
+  |> Pipe.map       int64
+  |> Pipe.filter    (fun v -> v % 2L = 0L)
+  |> Pipe.map       ((+) 1L)
+  |> Pipe.sum
+let pipeTest n =
+  Pipe.reset    testPipe
+  Pipe.receive  testPipe (0, 1, n) |> ignore
+  Pipe.finalize testPipe
 
 let trivialTest n =
   TrivialStream.range 0 1 n
@@ -94,8 +106,9 @@ let test (path : string) =
       "imperative"  , imperativeTest  , false
       "trivialpush" , trivialTest     , false
       "pushstream"  , pushTest        , false
-      "linq"        , linqTest        , false
-      "nessos"      , nessosTest      , false
+      "pipestream"  , pipeTest        , false
+//      "linq"        , linqTest        , false
+//      "nessos"      , nessosTest      , false
 //      "array"       , arrayTest       , false
     |]
   use out                   = new System.IO.StreamWriter (path)
