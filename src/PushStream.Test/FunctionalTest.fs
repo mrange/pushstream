@@ -22,16 +22,16 @@ open System.Linq
 open FsCheck
 open PushStream
 
-let inline clamp v b e =
+let clamp v b e =
   if    v < b then b
   elif  e < v then e
   else  v
 
-let between v b e =
+let wrap v b e =
   let bb = min b e
   let ee = max b e
-  let dd = ee - bb
-  if dd = 0 then bb
+  let dd = ee - bb + 1
+  if dd < 2 then bb
   else
     let aa = (v - bb) % dd |> abs
     bb + aa
@@ -50,13 +50,13 @@ type Between1And10 =
   | Between1And10 of int
   member x.Value =
     let (Between1And10 v) = x
-    between v 1 10
+    wrap v 1 10
 
 type Between10And100 =
   | Between10And100 of int
   member x.Value =
     let (Between10And100 v) = x
-    between v 10 100
+    wrap v 10 100
 
 type Chain =
   | ChunkBySize of Between1And10  // TODO: Make ChunkBySize recursive
@@ -106,7 +106,7 @@ type Properties() =
   static member ``test between`` (v : int) (x : int) (y : int) =
     let b = min x y
     let e = max x y
-    let v = between v x y
+    let v = wrap v x y
     v >= b && v <= e
 
   static member ``test Between1And10`` (b : Between1And10) =
@@ -187,7 +187,7 @@ type Properties() =
 
   static member ``test append + take`` (n : int) (f : int []) (s : int []) =
     // Because append has shortcut support
-    let n = (abs n) % (f.Length + s.Length + 1)
+    let n = wrap n 0 (f.Length + s.Length)
     let e = s |> Array.append f |> take n
     let a = f |> Stream.ofArray |> Stream.append (s |> Stream.ofArray) |> Stream.take n |> Stream.toArray
     e = a
@@ -216,7 +216,7 @@ type Properties() =
   static member ``test collect + take`` (n : int) (vs : int [] []) =
     // Because append has shortcut support
     let l = vs |> Array.collect id |> Array.length
-    let n = (abs n) % (l + 1)
+    let n = wrap n 0 l
     let e = vs |> Array.collect (take n)
     let a = vs |> Stream.ofArray |> Stream.collect (Stream.ofArray >> Stream.take n) |> Stream.toArray
     e = a
@@ -306,7 +306,7 @@ type Properties() =
 
   static member ``test unionBy + take`` (n : int) (f : int []) (s : int []) =
     // Because unionBy has shortcut support
-    let n = (abs n) % (f.Length + s.Length + 1)
+    let n = wrap n 0 (f.Length + s.Length)
     let e = f.Union(s, Stream.Internals.equality int64) |> take n
     let a = f |> Stream.ofArray |> Stream.unionBy int64 (s |> Stream.ofArray) |> Stream.take n |> Stream.toArray
     e = a
