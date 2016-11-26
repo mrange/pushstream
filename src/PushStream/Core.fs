@@ -49,6 +49,7 @@ module Stream =
           compare xx yy
       }
 
+    [<RequireQualifiedAccess>]
     module Loop =
       // Function local loop functions currently make F# 4.0 create unnecessary loop objects
       //  By making loop functions external no unnecessary object is created
@@ -58,7 +59,7 @@ module Stream =
       //    let rec rangeForward s e r i = if i <= e && r i then rangeForward s e r (i + s)
       //  Or:
       //    let rec rangeForward s e r i = let mutable i = i in while i <= e && r i do i <- i + s
-      let rec resizeArrayForward (vs : ResizeArray<'T>) r i = if i < vs.Count then if r vs.[i] then resizeArrayForward vs r (i + 1)
+      let rec resizeArrayForward (vs : ResizeArray<'T>) r i c = if i < c then if r vs.[i] then resizeArrayForward vs r (i + 1) c
       let rec resizeArrayReverse (vs : ResizeArray<'T>) r i = if i >= 0 then if r vs.[i] then resizeArrayReverse vs r (i - 1)
       let rec ofArray (vs : 'T []) r i = if i < vs.Length then if r vs.[i] then ofArray vs r (i + 1)
       let rec ofList r l =
@@ -108,7 +109,7 @@ module Stream =
   /// <returns>The stream of elements from the ResizeArray.</returns>
   let inline ofResizeArray (vs : ResizeArray<'T>) : Stream<'T> =
     fun r ->
-      Loop.resizeArrayForward vs r 0
+      Loop.resizeArrayForward vs r 0 vs.Count
 
   /// <summary>Builds a stream from the given seq.</summary>
   /// <param name="vs">The input seq.</param>
@@ -269,16 +270,9 @@ module Stream =
   /// <returns>The result stream.</returns>
   let exceptBy (by : 'T -> 'U) (ss : Stream<'T>) (fs : Stream<'T>) : Stream<'T> =
     fun r ->
-      let seen = Dictionary ()
-      fs (fun v -> let u = by v in if seen.ContainsKey u |> not then seen.Add (u, v); true else true)
-      ss (fun v -> if seen.Remove (by v) then seen.Count > 0 else true)
-      if seen.Count > 0 then
-        let ra = ResizeArray seen.Count
-        for kv in seen do
-          ra.Add kv.Value
-        seen.Clear ()
-        Loop.resizeArrayForward ra r 0
-        ra.Clear ()
+      let seen = HashSet ()
+      ss (fun v -> seen.Add (by v) |> ignore; true)
+      fs (fun v -> if seen.Add (by v) then r v else true)
 
   /// <summary>Returns a new stream containing only the elements of the collection
   /// for which the given predicate returns "true"</summary>
@@ -398,7 +392,7 @@ module Stream =
       let ra = ResizeArray defaultSize
       s (fun v -> ra.Add v; true)
       ra.Sort c
-      Loop.resizeArrayForward ra r 0
+      Loop.resizeArrayForward ra r 0 ra.Count
       ra.Clear ()
 
   /// <summary>Returns the first <c>n</c> elements of the stream.</summary>
