@@ -41,6 +41,11 @@ type FilterOption =
   | Nothing
   | Mod2
 
+type Value =
+  | String  of string
+  | Int     of int
+  | Float   of float
+
 type Between1And10 =
   | Between1And10 of int
   member x.Value =
@@ -121,6 +126,11 @@ type Properties() =
   static member ``test ofArray`` (vs : int []) =
     let e = vs
     let a = vs |> Stream.ofArray |> Stream.toArray
+    e = a
+
+  static member ``test ofEnumerable`` (vs : int []) =
+    let e : int [] = vs
+    let a : int [] = (vs :> System.Collections.IEnumerable) |> Stream.ofEnumerable |> Stream.tryCast |> Stream.toArray
     e = a
 
   static member ``test ofList`` (vs : int list) =
@@ -281,6 +291,12 @@ type Properties() =
     let t = t % 10
     let e = vs |> take t
     let a = vs |> Stream.ofArray |> Stream.take t |> Stream.toArray
+    e = a
+
+  static member ``test tryCast`` (vs : Value []) =
+    let vs            = vs |> Array.map (function String s -> box s | Int i -> box i | Float f -> box f)
+    let e : string [] = vs.OfType<string>().ToArray()
+    let a : string [] = vs |> Stream.ofArray |> Stream.tryCast |> Stream.toArray
     e = a
 
   static member ``test unionBy`` (f : int []) (s : int []) =

@@ -30,6 +30,8 @@ module Stream =
     let defaultSize       = 16
     let inline adapt s    = OptimizedClosures.FSharpFunc<_, _, _>.Adapt s
 
+    let inline cbox<'T when 'T : not struct> (v : 'T) = box v
+
     let inline equality by =
       { new IEqualityComparer<_> with
         member this.Equals (x, y) =
@@ -66,11 +68,6 @@ module Stream =
         match l with
         | x::xs -> if r x then ofList r xs
         | _     -> ()
-      let rec ofSeq (e : #IEnumerator<'T>) r =
-        let mutable e = e
-        // Doesn't use tail-rec because of e needs to be mutabler
-        //  seqs are slow anyhow
-        while e.MoveNext () && r e.Current do ()
       let rec rangeForward s e r i = if i <= e then if r i then rangeForward s e r (i + s)
       let rec rangeReverse s e r i = if i >= e then if r i then rangeReverse s e r (i + s)
       let rec replicate n v r i = if i < n then if r v then replicate n v r (i + 1)
@@ -97,6 +94,16 @@ module Stream =
     fun r ->
       Loop.ofArray vs r 0
 
+  /// <summary>Builds a stream from the given non-generic seq.</summary>
+  /// <param name="vs">The input seq.</param>
+  /// <returns>The stream of elements from the seq.</returns>
+  let inline ofEnumerable (vs : System.Collections.IEnumerable) : Stream<obj> =
+    fun r ->
+      let mutable e = vs.GetEnumerator ()
+      // Doesn't use tail-rec because e needs to be mutable in case of struct enumerators
+      //  enumerables are slow anyway
+      while e.MoveNext () && r e.Current do ()
+
   /// <summary>Builds a stream from the given list.</summary>
   /// <param name="vs">The input list.</param>
   /// <returns>The stream of elements from the list.</returns>
@@ -116,8 +123,10 @@ module Stream =
   /// <returns>The stream of elements from the seq.</returns>
   let inline ofSeq (vs : #seq<'T>) : Stream<'T> =
     fun r ->
-      use e = vs.GetEnumerator ()
-      Loop.ofSeq e r
+      use mutable e = vs.GetEnumerator ()
+      // Doesn't use tail-rec because e needs to be mutable in case of struct enumerators
+      //  seqs are slow anyway
+      while e.MoveNext () && r e.Current do ()
 
   /// <summary>Generates a stream from a range specification.</summary>
   /// <param name="b">The beginning of the range.</param>
@@ -345,6 +354,18 @@ module Stream =
     let mutable acc = max
     s (fun v -> acc <- min acc v; true)
     acc
+
+  /// <summary>Returns a new stream containing only the elements of the collection
+  /// that are of type 'U.</summary>
+  /// <param name="s">The input stream.</param>
+  /// <returns>A stream containing only the elements that are of type 'U.</returns>
+  let inline tryCast (s : Stream<'T>) : Stream<'U> =
+    fun r ->
+      s (fun v ->
+        match cbox v with
+        | :? 'U as u -> r u
+        | _          -> true
+        )
 
   /// <summary>Returns a stream that is the union of two streams with respect to the
   /// generic hash and equality comparisons on the keys returned by the given key-generating function.
