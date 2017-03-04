@@ -436,7 +436,29 @@ type Properties() =
       } |> Stream.toArray
     e = a
 
-  static member ``test builder - for`` x y =
+  static member ``test builder - for`array`` x y =
+    let f, l= firstLast x y
+    let e   = Array.init (l - f) ((+) f)
+    let r   = e
+    let a   =
+      stream {
+        for v in r do
+          yield v
+      } |> Stream.toArray
+    e = a
+
+  static member ``test builder - for`list`` x y =
+    let f, l= firstLast x y
+    let e   = Array.init (l - f) ((+) f)
+    let r   = e |> List.ofArray
+    let a   =
+      stream {
+        for v in r do
+          yield v
+      } |> Stream.toArray
+    e = a
+
+  static member ``test builder - for`seq`` x y =
     let f, l= firstLast x y
     let e   = Array.init (l - f) ((+) f)
     let a   =
@@ -444,6 +466,26 @@ type Properties() =
         for v in f..(l - 1) do
           yield v
       } |> Stream.toArray
+    e = a
+
+  static member ``test builder - for`stream`` x y =
+    let f, l= firstLast x y
+    let e   = Array.init (l - f) ((+) f)
+    let r   = Stream.range f 1 (l - 1)
+    let a   =
+      stream {
+        for v in r do
+          yield v
+      } |> Stream.toArray
+    e = a
+
+  static member ``test builder - for`string`` (e : string) =
+    let e   = if isNull e then "" else e
+    let a   =
+      stream {
+        for v in e do
+          yield v
+      } |> Stream.toArray |> System.String
     e = a
 
   static member ``test builder - while`` x y =

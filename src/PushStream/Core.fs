@@ -534,25 +534,51 @@ module Stream =
         fun r ->
           f r
           s r
+
       member inline x.Delay (tf : unit -> Stream<'T>) : Stream<'T> =
         fun r ->
           let t = tf ()
           t r
+
+      member inline x.For (s : string, uf: char -> Stream<'U>) : Stream<'U> =
+        fun r ->
+          for c in s do
+            let u = uf c
+            u r
+
+      member inline x.For (vs : 'T [], uf: 'T -> Stream<'U>) : Stream<'U> =
+        fun r ->
+          for v in vs do
+            let u = uf v
+            u r
+
+      member inline x.For (vs : 'T list, uf: 'T -> Stream<'U>) : Stream<'U> =
+        fun r ->
+          for v in vs do
+            let u = uf v
+            u r
+
       member inline x.For (vs : seq<'T>, uf: 'T -> Stream<'U>) : Stream<'U> =
         fun r ->
           for v in vs do
             let u = uf v
             u r
+
+      member inline x.For (t : Stream<'T>, uf: 'T -> Stream<'U>) : Stream<'U> =
+        bind t uf
+
       member inline x.While (test : unit -> bool, t : Stream<'T>) : Stream<'T> =
         fun r ->
           while test () do
             t r
+
       member inline x.TryFinally (t : Stream<'T>, d : unit -> unit) : Stream<'T> =
         fun r ->
           try
             t r
           finally
             d ()
+
       member inline x.TryWith (t : Stream<'T>, wf : exn -> Stream<'T>) : Stream<'T> =
         fun r ->
           try
@@ -561,13 +587,16 @@ module Stream =
             | e ->
               let w = wf e
               w r
+
       member inline x.Using (tv : 'T, uf: 'T -> Stream<'U>) : Stream<'U> =
         fun r ->
           use tv = tv
           let u  = uf tv
           u r
+
       member inline x.Yield v : Stream<'T>=
         singleton v
+
       member inline x.YieldFrom (t : Stream<'T>) : Stream<'T> =
         t
       member inline x.Zero () : Stream<'T> =
