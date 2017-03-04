@@ -527,3 +527,51 @@ module Stream =
   /// <param name="s">The input stream of streams.</param>
   /// <returns>The resulting concatenated stream.</returns>
   let inline concat s  = collect id s
+
+  module Builder =
+    type StreamBuilder () =
+      member inline x.Combine (f : Stream<'T>, s : Stream<'T>) : Stream<'T> =
+        fun r ->
+          f r
+          s r
+      member inline x.Delay (tf : unit -> Stream<'T>) : Stream<'T> =
+        fun r ->
+          let t = tf ()
+          t r
+      member inline x.For (vs : seq<'T>, uf: 'T -> Stream<'U>) : Stream<'U> =
+        fun r ->
+          for v in vs do
+            let u = uf v
+            u r
+      member inline x.While (test : unit -> bool, t : Stream<'T>) : Stream<'T> =
+        fun r ->
+          while test () do
+            t r
+      member inline x.TryFinally (t : Stream<'T>, d : unit -> unit) : Stream<'T> =
+        fun r ->
+          try
+            t r
+          finally
+            d ()
+      member inline x.TryWith (t : Stream<'T>, wf : exn -> Stream<'T>) : Stream<'T> =
+        fun r ->
+          try
+            t r
+          with
+            | e ->
+              let w = wf e
+              w r
+      member inline x.Using (tv : 'T, uf: 'T -> Stream<'U>) : Stream<'U> =
+        fun r ->
+          use tv = tv
+          let u  = uf tv
+          u r
+      member inline x.Yield v : Stream<'T>=
+        singleton v
+      member inline x.YieldFrom (t : Stream<'T>) : Stream<'T> =
+        t
+      member inline x.Zero () : Stream<'T> =
+        fun r ->
+          ()
+
+    let stream = StreamBuilder ()

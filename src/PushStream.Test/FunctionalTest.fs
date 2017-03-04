@@ -22,6 +22,8 @@ open System.Linq
 open FsCheck
 open PushStream
 
+open Stream.Builder
+
 let clamp v b e =
   if    v < b then b
   elif  e < v then e
@@ -95,6 +97,13 @@ type Properties() =
 
   static let skip n (vs : #seq<'T>) = vs.Skip(n).ToArray()
   static let take n (vs : #seq<'T>) = vs.Take(n).ToArray()
+
+  static let firstLast (x : int) (y : int) =
+    let x   = wrap x 0 100
+    let y   = wrap y 0 100
+    let f   = min x y
+    let l   = max x y
+    f, l
 
   // utility
   static member ``test clamp`` (v : int) (x : int) (y : int) =
@@ -413,7 +422,134 @@ type Properties() =
     let a = sa |> Stream.toArray
     e = a
 
+  static member ``test builder - yield`` (v : int) =
+    let e = [|v|]
+    let a = stream { yield v } |> Stream.toArray
+    e = a
+
+  static member ``test builder - double yield`` (v : int) =
+    let e = [|v; -v|]
+    let a =
+      stream {
+        yield v
+        yield! (Stream.singleton -v)
+      } |> Stream.toArray
+    e = a
+
+  static member ``test builder - for`` x y =
+    let f, l= firstLast x y
+    let e   = Array.init (l - f) ((+) f)
+    let a   =
+      stream {
+        for v in f..(l - 1) do
+          yield v
+      } |> Stream.toArray
+    e = a
+
+  static member ``test builder - while`` x y =
+    let f, l= firstLast x y
+    let e   = Array.init (l - f) ((+) f)
+    let a   =
+      stream {
+        let mutable v = f
+        while v < l do
+          yield v
+          v <- v + 1
+      } |> Stream.toArray
+    e = a
+
+  static member ``test builder - try..finally`` x y =
+    let f, l= firstLast x y
+    let ef  = ref 0
+    let af  = ref 0
+    let eex = ref 0
+    let aex = ref 0
+    let e   =
+      try
+        seq {
+          try
+            for i in 0..f do
+              try
+                if i = l then
+                  failwithf "%A" l
+                yield i
+              finally
+                incr ef
+          finally
+            incr ef
+        } |> Seq.toArray
+      with
+      | e -> incr eex; [||]
+    let a   =
+      try
+        stream {
+          try
+            for i in 0..f do
+              try
+                if i = l then
+                  failwithf "%A" l
+                yield i
+              finally
+                incr af
+          finally
+            incr af
+        } |> Stream.toArray
+      with
+      | e -> incr aex; [||]
+    true
+    && e    = a
+    && !ef  = !af
+    && !eex = !aex
+
+//  static member ``test builder - try..with`` x y =
+
+
+  static member ``test builder - using`` x y =
+    let f, l    = firstLast x y
+    let ef      = ref 0
+    let af      = ref 0
+    let eex     = ref 0
+    let aex     = ref 0
+    let edisp ()=
+      { new IDisposable with
+          member x.Dispose () = incr eex
+      }
+    let adisp ()=
+      { new IDisposable with
+          member x.Dispose () = incr aex
+      }
+    let e   =
+      try
+        seq {
+          use d1 = edisp ()
+          for i in 0..f do
+            use d2 = edisp ()
+            if i = l then
+              failwithf "%A" l
+            yield i
+        } |> Seq.toArray
+      with
+      | e -> incr eex; [||]
+    let a   =
+      try
+        stream {
+          use d1 = adisp ()
+          for i in 0..f do
+            use d2 = adisp ()
+            if i = l then
+              failwithf "%A" l
+            yield i
+        } |> Stream.toArray
+      with
+      | e -> incr aex; [||]
+    true
+    && e    = a
+    && !ef  = !af
+    && !eex = !aex
+
+
 let test () =
+  Properties.``test builder - while`` 0 2 |> printfn "%A"
   // Code coverage for 'Stream.debug'
   Stream.range 4 -1 0
   |> Stream.debug "range"
