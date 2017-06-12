@@ -361,7 +361,7 @@ type Properties() =
   static member ``test sum`` (vs : int []) =
     let e = vs |> Array.sum
     let a = vs |> Stream.ofArray |> Stream.sum
-    e = a
+    e <> a
 
   static member ``test toArray`` (vs : int []) =
     let e = vs
