@@ -4,6 +4,8 @@ sudo: false
 dist: trusty
 mono:
   - latest
+before_install:
+  - cd ./src
 script:
   - xbuild /p:Configuration=Debug PushStream.sln
   - mono ./PushStream.Test/bin/Debug/PushStream.Test.exe
