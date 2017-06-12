@@ -1,5 +1,7 @@
 # pushstream
 
+[![Build Status](https://travis-ci.org/mrange/pushstream.svg?branch=master)](https://travis-ci.org/mrange/pushstream)
+
 `PushStream` is a simplistic but performant push data pipeline for F#
 
 With the excellent data pipeline [Nessos Streams](https://github.com/nessos/Streams)
@@ -94,7 +96,7 @@ GC overhead than `Nessos`.
 
 ## Conclusion
 
-`Nessos` is a great data pipeline library but `PushStream` offers simplicity and lower 
+`Nessos` is a great data pipeline library but `PushStream` offers simplicity and lower
 overhead if you don't need all features of `Nessos`.
 
 ## TODO
