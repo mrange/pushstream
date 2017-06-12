@@ -1,0 +1,12 @@
+language: csharp
+solution: PushStream.sln
+sudo: false
+dist: trusty
+mono:
+  - latest
+script:
+  - xbuild /p:Configuration=Debug PushStream.sln
+  - mono ./PushStream.Test/bin/Debug/PushStream.Test.exe
+
+
+
