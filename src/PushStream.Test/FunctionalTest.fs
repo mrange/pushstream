@@ -414,6 +414,7 @@ type Properties() =
     e = a
 
 let test () =
+  printfn "Running functional tests..."
   // Code coverage for 'Stream.debug'
   Stream.range 4 -1 0
   |> Stream.debug "range"
@@ -428,6 +429,26 @@ let test () =
   let maxTest = 1000
 #endif
 
-  let config = { Config.Quick with MaxTest = maxTest; MaxFail = maxTest }
+  let mutable failureCount = 0
+
+  let runner =
+    let runner = Config.Quick.Runner
+    { new IRunner with
+        member __.OnStartFixture t                  = runner.OnStartFixture t
+        member __.OnArguments (ntest, args, every)  = runner.OnArguments (ntest, args, every)
+        member __.OnShrink (args, everyShrink)      = runner.OnShrink (args, everyShrink)
+        member __.OnFinished (name, testResult)     =
+            match testResult with
+            | TestResult.False _  -> failureCount <- failureCount + 1
+            | _                   -> ()
+            runner.OnFinished (name, testResult)
+    }
+
+  let config = { Config.Quick with MaxTest = maxTest; MaxFail = maxTest; Runner = runner }
 
   Check.All<Properties> config
+
+  printfn "Functional tests completed, number of failures detected: %d" failureCount
+
+  if failureCount = 0 then 0 else 998
+
