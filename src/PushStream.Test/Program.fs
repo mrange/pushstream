@@ -15,12 +15,13 @@
 // ----------------------------------------------------------------------------------------------
 [<EntryPoint>]
 let main argv =
-  System.Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory
+  try
+    System.Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory
 
 #if !DEBUG
-  PerformanceTest.test "perf.tsv"
+    PerformanceTest.test "perf.tsv"
 #endif
 
-  FunctionalTest.test ()
-
-  0
+    FunctionalTest.test ()
+  with
+  | e -> printfn "Exception caught: %s" e.Message; 999

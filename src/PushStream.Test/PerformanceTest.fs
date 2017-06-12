@@ -89,6 +89,8 @@ let trivialTest n =
 open System.Diagnostics
 
 let test (path : string) =
+  printfn "Running performance tests..."
+
   let testCases =
     [|
       "imperative"  , imperativeTest  , false
@@ -120,3 +122,5 @@ let test (path : string) =
       printfn "  ... %d ms, cc=%d, cc0=%d, cc1=%d, cc2=%d, result=%A" ms cc cc0 cc1 cc2 v
       writef "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" name total outer inner ms cc cc0 cc1 cc2 v
       if obreak && ibreak && Debugger.IsAttached then Debugger.Break ()
+
+  printfn "Performance tests completed"
