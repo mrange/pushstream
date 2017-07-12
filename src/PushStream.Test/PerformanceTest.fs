@@ -86,6 +86,17 @@ let trivialTest n =
   |> TrivialStream.map     ((+) 1L)
   |> TrivialStream.sum
 
+let variantTest n =
+  VariantStream.range 0 1 n
+  |> VariantStream.map     int64
+  |> VariantStream.filter  (fun v -> v % 2L = 0L)
+  |> VariantStream.map     ((+) 1L)
+  |> VariantStream.sum
+
+
+//  let csStreamTest n = Stream.Range(0, 1, n).Select(fun i -> int64 i).Where(fun v -> v % 2L = 0L).Select(fun i -> i + 1L).Sum()
+let csStreamTest n = CsStream.Stream.TestIt(n)
+
 open System.Diagnostics
 
 let test (path : string) =
@@ -95,10 +106,12 @@ let test (path : string) =
     [|
       "imperative"  , imperativeTest  , false
       "trivialpush" , trivialTest     , false
+      "variantpush" , variantTest     , false
+      "csstream"    , csStreamTest    , false
       "pushstream"  , pushTest        , false
       "linq"        , linqTest        , false
       "nessos"      , nessosTest      , false
-//      "array"       , arrayTest       , false
+      "array"       , arrayTest       , false
     |]
   use out                   = new System.IO.StreamWriter (path)
   let write (msg : string)  = out.WriteLine msg
